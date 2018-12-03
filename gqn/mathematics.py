@@ -1,4 +1,6 @@
 import math
+import numpy as np
+import cv2
 
 
 def yaw(eye, center):
@@ -22,3 +24,43 @@ def pitch(eye, center):
     radius = math.sqrt(eye_direction[0]**2 + eye_direction[2]**2)
     rad = math.atan(eye_direction[1] / (radius + 1e-16))
     return rad
+
+
+def get_KL_div(img_original, img_predict):
+    assert img_original.shape == img_predict.shape
+    assert len(img_original.shape) <= 3
+    assert len(img_predict.shape) <= 3
+
+    img_original = img_original.transpose((1, 2, 0)).astype(np.float32)
+    img_predict = img_predict.transpose((1, 2, 0)).astype(np.float32)
+
+    img_shape = img_original.shape # ex) (64, 64) expected for black and white image
+    img_pixel_num = img_original.shape[0] * img_original.shape[1]
+
+    if len(img_shape) == 3:
+        img_original = cv2.cvtColor(img_original, cv2.COLOR_RGB2GRAY)
+        img_predict = cv2.cvtColor(img_predict, cv2.COLOR_RGB2GRAY)
+
+
+    img_original_flat = [int(item * 255) for sublist in img_original for item in sublist]
+    img_predict_flat = [int(item * 255) for sublist in img_predict for item in sublist]
+
+    bit_per_pixel = 8
+    entropy_original = 0
+    entropy_original_gen = 0
+
+    for i in range(2**bit_per_pixel - 1):
+        original_i_ratio = len([x for x in img_original_flat if x == i]) / img_pixel_num
+        gen_i_ratio = len([x for x in img_predict_flat if x == i]) / img_pixel_num
+
+        if gen_i_ratio > 0:
+            entropy_original_gen += original_i_ratio * math.log(gen_i_ratio)
+        if original_i_ratio > 0:
+            entropy_original += original_i_ratio * math.log(original_i_ratio)
+
+    entropy_original_gen = -entropy_original_gen
+    entropy_original = -entropy_original
+
+    KL_divergence = entropy_original_gen - entropy_original
+
+    return KL_divergence if KL_divergence > 0 else 0
