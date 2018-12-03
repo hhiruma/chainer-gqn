@@ -13,7 +13,7 @@ import cupy
 import numpy as np
 from chainer.backends import cuda
 
-sys.path.append(".")
+sys.path.append("../../")
 import gqn
 from hyperparams import HyperParameters
 from model import Model
