@@ -78,8 +78,9 @@ def add_annotation(axis, array):
     text = axis.text(-30, -60, "neural rendering", fontsize=18)
     array.append(text)
 
-def update(i):
-
+def func_anim_upate(i, fig, snapshot_array):
+    snapshot = snapshot_array[0][i]
+    snapshot.print_to_fig(fig)
 
 
 def main():
@@ -104,24 +105,6 @@ def main():
     plt.style.use("dark_background")
     fig = plt.figure(figsize=(10, 5))
 
-    axis_observation_array = []
-    axis_observation_array.append(fig.add_subplot(2, 4, 1))
-    axis_observation_array.append(fig.add_subplot(2, 4, 2))
-    axis_observation_array.append(fig.add_subplot(2, 4, 5))
-    axis_observation_array.append(fig.add_subplot(2, 4, 6))
-
-    for axis in axis_observation_array:
-        axis.axis("off")
-
-    axis_generation_array = []
-    axis_generation_array.append(fig.add_subplot(2, 4, 3))
-    axis_generation_array.append(fig.add_subplot(2, 4, 4))
-    axis_generation_array.append(fig.add_subplot(2, 4, 7)) #use this for original output
-    axis_generation_array.append(fig.add_subplot(2, 4, 8)) #use this for original output
-
-    for axis in axis_generation_array:
-        axis.axis("off")
-
     num_views_per_scene = 4
     num_generation = 2 # lessened from 4 to 2 (remaining 2 used for original outpu)
     num_original = 2
@@ -136,7 +119,7 @@ def main():
             iterator = gqn.data.Iterator(subset, batch_size=1)
 
             for data_indices in iterator:
-                artist_frame_array = []
+                snapshot_array = []
 
                 observed_image_array = xp.zeros(
                     (num_views_per_scene, ) + image_shape, dtype=np.float32)
@@ -173,15 +156,21 @@ def main():
                 current_scene_original_images_cpu = original_images[batch_index]
                 current_scene_original_images = to_gpu(current_scene_original_images_cpu)
                 kl_div_sum = 0
-                for t in range(total_frames_per_rotation):
-                    artist_array = []
 
-                    for axis in axis_observation_array:
-                        axis_image = axis.imshow(
-                            make_uint8(blank_image),
-                            interpolation="none",
-                            animated=True)
-                        artist_array.append(axis_image)
+                for t in range(total_frames_per_rotation):
+                    snapshot = gqn.animator.Snapshot((2, 4))
+
+                    for i in [1, 2, 5, 6]:
+                        snapshot.add_media(
+                            media_type='image',
+                            media_data=make_uint8(blank_image),
+                            media_position=i
+                        )
+                        if i == 1:
+                            snapshot.add_title(
+                                text='Observed',
+                                target_media_pos=i
+                            )
 
                     query_viewpoints = rotate_query_viewpoint(
                         angle_rad, num_generation, xp)
@@ -192,53 +181,32 @@ def main():
                         to_cpu(current_scene_original_images[t]),
                         to_cpu(generated_images[0]))
 
-                    for j in range(num_generation):
-                        axis = axis_generation_array[j]
-                        image = make_uint8(generated_images[j])
-                        # annotation may work well
-                        # https://stackoverflow.com/questions/24166236/add-text-to-image-animated-with-matplotlib-artistanimation
-                        axis_image = axis.imshow(
-                            image, interpolation="none", animated=True)
-                        artist_array.append(axis_image)
-
-                    for j in range(num_original-1):
-                        axis = axis_generation_array[j+num_generation]
-                        image = make_uint8(current_scene_original_images[t])
-                        axis_image = axis.imshow(
-                            image,
-                            interpolation="none",
-                            animated=True)
-                        artist_array.append(axis_image)
-
-                    axis = axis_generation_array[num_generation+num_original-1]
-                    axis.clear()
-                    axis.text(10, 10, 'KL: '+str(kl_div))
-                    # axis_image, _, junk = axis.pie([kl_div, 1-kl_div],
-                    axis_image, _ = axis.pie([kl_div, 1-kl_div],
-                    # axis_image = axis.bar([kl_div], [0]
-                        # labels=["KL_divergence", ""],
-                        # labeldistance=0.5,
-                        colors=["green", "blue"],
-                        startangle=90,
-                        wedgeprops={'animated': True, 'edgecolor': 'white'},
-                        # autopct="%.1f%%",
-                        counterclock=False
+                    for i in [3]:
+                        snapshot.add_media(
+                            media_type='image',
+                            media_data=make_uint8(generated_images[0]),
+                            media_position=i
                         )
-                    # print(axis_image)
-                    kl_div_sum += kl_div
-                    print(kl_div)
-                    artist_array.append(axis_image[1])
+                        snapshot.add_title(
+                            text='Generated: {:.3f}'.format(kl_div),
+                            target_media_pos=i
+                        )
+
+                    for i in [4]:
+                        snapshot.add_media(
+                            media_type='image',
+                            media_data=make_uint8(current_scene_original_images[t]),
+                            media_position=i
+                        )
+                        snapshot.add_title(
+                            text='Original',
+                            target_media_pos=i
+                        )
+
+                    snapshot_array.append(snapshot)
 
                     angle_rad += 2 * math.pi / total_frames_per_rotation
 
-                    # plt.pause(1e-8)
-                    axis = axis_generation_array[-1]
-                    add_annotation(axis, artist_array)
-                    artist_frame_array.append(artist_array)
-
-                print('kl_div_sum = ' + str(kl_div_sum))
-                print('total_frames_per_rotation = ' + str(total_frames_per_rotation))
-                print('kl_div average 0 = ' + str(kl_div_sum / total_frames_per_rotation))
 
                 # Generate images with observations
                 for m in range(num_views_per_scene):
@@ -257,15 +225,19 @@ def main():
 
                     angle_rad = 0
                     for t in range(total_frames_per_rotation):
-                        artist_array = []
+                        snapshot = gqn.animator.Snapshot((2, 4))
 
-                        for axis, observed_image in zip(
-                                axis_observation_array, observed_image_array):
-                            axis_image = axis.imshow(
-                                make_uint8(observed_image),
-                                interpolation="none",
-                                animated=True)
-                            artist_array.append(axis_image)
+                        for i, observed_image in zip([1, 2, 5, 6], observed_image_array):
+                            snapshot.add_media(
+                                media_type='image',
+                                media_data=make_uint8(observed_image),
+                                media_position=i
+                            )
+                            if i == 1:
+                                snapshot.add_title(
+                                    text='Observed',
+                                    target_media_pos=i
+                                )
 
                         query_viewpoints = rotate_query_viewpoint(
                             angle_rad, num_generation, xp)
@@ -276,46 +248,43 @@ def main():
                             to_cpu(current_scene_original_images[t]),
                             to_cpu(generated_images[0]))
 
-                        for j in range(num_generation):
-                            axis = axis_generation_array[j]
-                            axis_image = axis.imshow(
-                                make_uint8(generated_images[j]),
-                                interpolation="none",
-                                animated=True)
-                            artist_array.append(axis_image)
+                        for i in [3]:
+                            snapshot.add_media(
+                                media_type='image',
+                                media_data=make_uint8(generated_images[0]),
+                                media_position=i
+                            )
+                            snapshot.add_title(
+                                text='Generated: {:.3f}'.format(kl_div),
+                                target_media_pos=i
+                            )
 
-                        for j in range(num_original-1):
-                            axis = axis_generation_array[j+num_generation]
-                            image = make_uint8(current_scene_original_images[t])
-                            axis_image = axis.imshow(
-                                image,
-                                interpolation="none",
-                                animated=True)
-                            artist_array.append(axis_image)
+                        for i in [4]:
+                            snapshot.add_media(
+                                media_type='image',
+                                media_data=make_uint8(current_scene_original_images[t]),
+                                media_position=i
+                            )
+                            snapshot.add_title(
+                                text='Original',
+                                target_media_pos=i
+                            )
 
-                        axis = axis_generation_array[num_generation+num_original-1]
-                        axis.clear()
-                        axis.text(10, 10, 'KL: '+str(kl_div))
-                        axis_image, _ = axis.pie([kl_div, 1-kl_div],
-                            colors=["red", "blue"],
-                            startangle=90,
-                            wedgeprops={'animated': True, 'edgecolor': 'white'},
-                            counterclock=False)
-                        kl_div_sum += kl_div
-                        print(kl_div)
-                        artist_array.append(axis_image[1])
+                        for i in [7]:
+                            snapshot.add_media(
+                                media_type='num',
+                                media_data=kl_div,
+                                media_position=i,
+                                media_options={
+                                    'coordinates': (10, 10)
+                                }
+                            )
 
                         angle_rad += 2 * math.pi / total_frames_per_rotation
                         # plt.pause(1e-8)
 
-                        axis = axis_generation_array[-1]
-                        add_annotation(axis, artist_array)
-                        artist_frame_array.append(artist_array)
-                    print('kl_div_sum = ' + str(kl_div_sum))
-                    print('total_frames_per_rotation = ' + str(total_frames_per_rotation))
-                    print('kl_div average 0 = ' + str(kl_div_sum / total_frames_per_rotation))
+                        snapshot_array.append(snapshot)
 
-                plt.tight_layout()
                 plt.subplots_adjust(
                     left=None,
                     bottom=None,
@@ -323,21 +292,15 @@ def main():
                     top=None,
                     wspace=0,
                     hspace=0)
-                # anim = animation.ArtistAnimation(
-                    # fig,
-                    # artist_frame_array,
-                    # interval=1 / 24,
-                    # blit=true,
-                    # repeat_delay=0)
-                anim = animation.funcanimation(
-                    fig,
-                    funcAnimUpdate,
-                    )
 
-                anim.save(
-                    "{}/shepard_matzler_{}.gif".format(
-                        args.output_directory, file_number),
-                    writer="imagemagick")
+                anim = animation.FuncAnimation(
+                    fig,
+                    func_anim_upate,
+                    fargs = (fig, [snapshot_array]),
+                    interval=1/24,
+                    frames= (num_views_per_scene + 1) * total_frames_per_rotation
+                )
+
                 anim.save(
                     "{}/shepard_matzler_{}.mp4".format(
                         args.output_directory, file_number),

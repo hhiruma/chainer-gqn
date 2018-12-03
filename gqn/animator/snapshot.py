@@ -5,8 +5,8 @@ class Snapshot():
         self.fig_row = fig_shape[0]
         self.fig_col = fig_shape[1]
 
-    def add_media(self, media_type: str, media_data, media_position: int, media_options=[]):
-        assert media_type in {'image', 'plt'}
+    def add_media(self, media_type: str, media_data, media_position: int, media_options={}):
+        assert media_type in {'image', 'plt', 'num'}
         assert media_position <= self.fig_row * self.fig_col
 
         self.media_list.append({
@@ -16,7 +16,7 @@ class Snapshot():
             'media_options': media_options
         })
 
-    def add_title(self, text: str, target_media_pos: int, title_options=[]):
+    def add_title(self, text: str, target_media_pos: int, title_options={}):
         self.title_list.append({
             'text': text,
             'target_media_pos': target_media_pos,
@@ -36,9 +36,16 @@ class Snapshot():
                 if media['media_type'] == 'image':
                     axis.axis('off')
                     axis.imshow(media['media_data'], interpolation="none", animated=True)
-                else:
+                elif media['media_type'] == 'plt':
                     pass
+                else:
+                    assert isinstance(media['media_options']['coordinates'], tuple)
+                    pos_x, pos_y = media['media_options']['coordinates']
+
+                    # axis.axis('off')
+                    axis.text(pos_x, pos_y, 'KL_Div = {:.3f}'.format(media['media_data']))
+
 
                 if len(_title):
                     title = _title[0]
-                    axis.set_title(title)
+                    axis.set_title(title['text'])
