@@ -156,7 +156,6 @@ def main():
                 current_scene_original_images = to_gpu(current_scene_original_images_cpu)
 
                 for t in range(total_frames_per_rotation):
-                    artist_array = []
                     snapshot = gqn.animator.Snapshot((2, 4))
 
                     for i in [1, 2, 5, 6]:
