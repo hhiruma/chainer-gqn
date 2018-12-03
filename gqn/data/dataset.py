@@ -18,7 +18,7 @@ class Dataset():
 
     def __iter__(self):
         self.current_subset_index = 0
-        random.shuffle(self.subset_filenames)
+        # random.shuffle(self.subset_filenames)
         return self
 
     def __next__(self):
