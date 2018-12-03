@@ -33,7 +33,8 @@ class Dataset():
         images_npy_path = os.path.join(self.directory, "images", filename)
         viewpoints_npy_path = os.path.join(self.directory, "viewpoints",
                                            filename)
-        subset = Subset(images_npy_path, viewpoints_npy_path)
+        original_images_npy_path = os.path.join(self.directory, "original_images", filename)
+        subset = Subset(images_npy_path, viewpoints_npy_path, original_images_npy_path)
         return subset
 
     def __len__(self):
