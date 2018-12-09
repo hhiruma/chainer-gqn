@@ -64,3 +64,27 @@ def get_KL_div(img_original, img_predict):
     KL_divergence = entropy_original_gen - entropy_original
 
     return KL_divergence if KL_divergence > 0 else 0
+
+def get_squared_distance(img_original, img_predict):
+    assert img_original.shape == img_predict.shape
+    assert len(img_original.shape) <= 3
+    assert len(img_predict.shape) <= 3
+
+    total_distance = 0
+    regional_distance = np.zeros((64, 64, 3))
+
+    img_original = img_original.transpose((1, 2, 0)).astype(np.float32)
+    img_predict = img_predict.transpose((1, 2, 0)).astype(np.float32)
+
+    for i, (row_orig, row_pred) in enumerate(zip(img_original, img_predict)):
+        for j, (dot_orig, dot_pred) in enumerate(zip(row_orig, row_pred)):
+            for k, (rgb_orig, rgb_pred) in enumerate(zip(dot_orig, dot_pred)):
+                distance = 0.5 * (rgb_orig - rgb_pred)**2
+                total_distance += distance
+                regional_distance[i][j][0] += distance
+                regional_distance[i][j][1] += distance
+                regional_distance[i][j][2] += distance
+
+    regional_distance = regional_distance.transpose((2, 0, 1))
+
+    return total_distance, regional_distance
