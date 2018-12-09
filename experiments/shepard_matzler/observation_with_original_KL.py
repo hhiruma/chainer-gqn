@@ -80,7 +80,7 @@ def add_annotation(axis, array):
 
 def func_anim_upate(i, fig, snapshot_array):
     snapshot = snapshot_array[0][i]
-    snapshot.print_to_fig(fig)
+    snapshot.print_to_fig(fig, frame_num=i)
 
 
 def main():
@@ -155,7 +155,21 @@ def main():
                 angle_rad = 0
                 current_scene_original_images_cpu = original_images[batch_index]
                 current_scene_original_images = to_gpu(current_scene_original_images_cpu)
+
                 kl_div_sum = 0
+                kl_div_list = np.zeros((1 + num_views_per_scene, total_frames_per_rotation))
+
+                gqn.animator.Snapshot.make_graph(
+                    id='kl_div_graph',
+                    pos=7,
+                    graph_type='plot',
+                    frame_in_rotation=total_frames_per_rotation,
+                    num_of_data_per_graph=num_views_per_scene + 1,
+                    trivial_settings={
+                        'colors': ['red', 'blue', 'green', 'orange', 'white'],
+                        'markers': ['o', 'o', 'o', 'o', 'o']
+                    }
+                )
 
                 for t in range(total_frames_per_rotation):
                     snapshot = gqn.animator.Snapshot((2, 4))
@@ -188,7 +202,7 @@ def main():
                             media_position=i
                         )
                         snapshot.add_title(
-                            text='Generated: {:.3f}'.format(kl_div),
+                            text='Generated',
                             target_media_pos=i
                         )
 
@@ -202,6 +216,18 @@ def main():
                             text='Original',
                             target_media_pos=i
                         )
+
+                    gqn.animator.Snapshot.add_graph_data(
+                        graph_id='kl_div_graph',
+                        data_id='kl_div_data_0',
+                        new_data=kl_div,
+                        frame_num=t,
+                    )
+
+                    snapshot.add_title(
+                        text='KL Divergence',
+                        target_media_pos=7
+                    )
 
                     snapshot_array.append(snapshot)
 
@@ -255,7 +281,7 @@ def main():
                                 media_position=i
                             )
                             snapshot.add_title(
-                                text='Generated: {:.3f}'.format(kl_div),
+                                text='Generated',
                                 target_media_pos=i
                             )
 
@@ -270,15 +296,17 @@ def main():
                                 target_media_pos=i
                             )
 
-                        for i in [7]:
-                            snapshot.add_media(
-                                media_type='num',
-                                media_data=kl_div,
-                                media_position=i,
-                                media_options={
-                                    'coordinates': (10, 10)
-                                }
-                            )
+                        gqn.animator.Snapshot.add_graph_data(
+                            graph_id='kl_div_graph',
+                            data_id='kl_div_data_' + str(m+1),
+                            new_data=kl_div,
+                            frame_num=t,
+                        )
+
+                        snapshot.add_title(
+                            text='KL Divergence',
+                            target_media_pos=7
+                        )
 
                         angle_rad += 2 * math.pi / total_frames_per_rotation
                         # plt.pause(1e-8)
