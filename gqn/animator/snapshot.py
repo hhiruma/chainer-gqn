@@ -20,6 +20,40 @@ class Snapshot():
             'media_options': media_options
         })
 
+    def get_subplot(self, position: int):
+        assert position <= self.fig_row * self.fig_col
+
+        _media = [x for x in self.media_list     if x['media_position']   == position]
+        _graph = [x for x in Snapshot.graph_list if x['position']         == position]
+        _title = [x for x in self.title_list     if x['target_media_pos'] == position]
+
+        if len(_media):
+            assert len(_media) == 1
+            subplot_data = {
+                'type': 'media',
+                'body': _media[0],
+                'title': {}
+            }
+            if len(_title):
+                assert len(_title) == 1
+                subplot_data['title'] = _title[0]
+            return subplot_data
+
+        elif len(_graph):
+            assert len(_graph) == 1
+            subplot_data = {
+                'type': 'graph',
+                'body': _graph[0],
+                'title': {}
+            }
+            if len(_title):
+                assert len(_title) == 1
+                subplot_data['title'] = _title[0]
+            return subplot_data
+
+        else:
+            raise TypeError('No subplot found in position')
+
     @classmethod
     def add_graph_data(self, graph_id: str, data_id: str, new_data, frame_num: int):
         target_graph_index = -1
