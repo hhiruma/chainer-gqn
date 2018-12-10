@@ -9,4 +9,4 @@ class Sampler:
         return len(self.subset)
 
     def __iter__(self):
-        return iter(np.random.permutation(len(self.subset)))
+        return iter(np.array([i for i in range(len(self.subset))]))
