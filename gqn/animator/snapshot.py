@@ -22,28 +22,8 @@ class Snapshot():
             #   ]
             # }
 
-            # a
-            # #   'master_settings': {
-            # #       'nrows': int,
-            # #       'ncols': int,
-            # #       'height_ratio': [int]
-            # #   },
-            # #   'subplot_settings': {
-            # #       [{
-            # #          'nrows': int,
-            # #          'ncols': int,
-            # #          'subplot_spec': [],
-            # #          'axis_list': [{
-            # #               'axis_pos': [],
-            # #               'axis_id': int
-            # #          }]
-            # #       }]
-            # #   }
-            # # }
-
     def add_media(self, media_type: str, media_data, media_position: int, media_options={}):
         assert media_type in {'image', 'num'}
-        # assert media_position <= self.fig_row * self.fig_col
 
         self.media_list.append({
             'media_type': media_type,
@@ -53,8 +33,6 @@ class Snapshot():
         })
 
     def get_subplot(self, position: int):
-        # assert position <= self.fig_row * self.fig_col
-
         _media = [x for x in self.media_list     if x['media_position']   == position]
         _graph = [x for x in Snapshot.graph_list if x['position']         == position]
         _title = [x for x in self.title_list     if x['target_media_pos'] == position]
@@ -92,7 +70,6 @@ class Snapshot():
         target_graph_data = {}
         target_data_index = -1
 
-        #すでに同じidがあってもかさねとして別のオブジェクトをつくろう
         for i, graph in enumerate(Snapshot.graph_list):
             if graph['id'] == graph_id:
                 target_graph_index = i
