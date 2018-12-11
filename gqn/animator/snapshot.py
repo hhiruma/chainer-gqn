@@ -1,17 +1,49 @@
 import numpy as np
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 class Snapshot():
     graph_list = []
 
-    def __init__(self, fig_shape):
+    def __init__(self, fig_shape=(), layout_settings={}):
         self.media_list = []
         self.title_list = []
-        self.fig_row = fig_shape[0]
-        self.fig_col = fig_shape[1]
+        if not fig_shape == ():
+            self.fig_row = fig_shape[0]
+            self.fig_col = fig_shape[1]
+        self.use_grid = not layout_settings == {}
+        self.layout_settings = layout_settings
+            # expected shape
+            # {
+            #   'subplot_count': int,
+            #   'grid_master': GridSpec Object,
+            #   'subplots': [
+            #       'subplot_id': int,
+            #       'subplot': GridSpecFromSubplotSpec Object
+            #   ]
+            # }
+
+            # a
+            # #   'master_settings': {
+            # #       'nrows': int,
+            # #       'ncols': int,
+            # #       'height_ratio': [int]
+            # #   },
+            # #   'subplot_settings': {
+            # #       [{
+            # #          'nrows': int,
+            # #          'ncols': int,
+            # #          'subplot_spec': [],
+            # #          'axis_list': [{
+            # #               'axis_pos': [],
+            # #               'axis_id': int
+            # #          }]
+            # #       }]
+            # #   }
+            # # }
 
     def add_media(self, media_type: str, media_data, media_position: int, media_options={}):
         assert media_type in {'image', 'num'}
-        assert media_position <= self.fig_row * self.fig_col
+        # assert media_position <= self.fig_row * self.fig_col
 
         self.media_list.append({
             'media_type': media_type,
@@ -21,7 +53,7 @@ class Snapshot():
         })
 
     def get_subplot(self, position: int):
-        assert position <= self.fig_row * self.fig_col
+        # assert position <= self.fig_row * self.fig_col
 
         _media = [x for x in self.media_list     if x['media_position']   == position]
         _graph = [x for x in Snapshot.graph_list if x['position']         == position]
@@ -103,6 +135,7 @@ class Snapshot():
                        graph_type: str,
                        frame_in_rotation: int,
                        num_of_data_per_graph=1,
+                       layout_settings={},
                        trivial_settings={}):
 
         for graph in Snapshot.graph_list:
@@ -130,19 +163,36 @@ class Snapshot():
         })
 
     def print_to_fig(self, fig, frame_num):
-        for i in range(int(self.fig_row * self.fig_col)):
+        if self.use_grid:
+            position_range = self.layout_settings['subplot_count']
+        else:
+            position_range = int(self.fig_row * self.fig_col)
+
+        for i in range(position_range):
             position = i + 1
             _media = [x for x in self.media_list     if x['media_position']   == position]
             _graph = [x for x in Snapshot.graph_list if x['position']         == position]
             _title = [x for x in self.title_list     if x['target_media_pos'] == position]
+
+            if self.use_grid:
+                target_subplot_axis_list = [subplot['subplot']
+                            for subplot in self.layout_settings['subplots']
+                            if subplot['subplot_id'] == position ]
+
+                if len(target_subplot_axis_list):
+                    target_subplot = target_subplot_axis_list[0]
+                else:
+                    continue
+
+                axis = fig.add_subplot(target_subplot[:, :])
+            else:
+                axis = fig.add_subplot(self.fig_row, self.fig_col, position)
 
             if len(_media):
                 if len(_media) > 1:
                     raise TypeError('Multiple media located on same position')
 
                 media = _media[0]
-                axis = fig.add_subplot(self.fig_row, self.fig_col, media['media_position'])
-
                 if media['media_type'] == 'image':
                     axis.axis('off')
                     axis.imshow(media['media_data'], interpolation="none", animated=True)
@@ -154,20 +204,17 @@ class Snapshot():
                     axis.axis('off')
                     axis.text(pos_x, pos_y, 'KL_Div = {:.3f}'.format(media['media_data']))
 
-
                 if len(_title):
                     if len(_title) > 1:
                         raise TypeError('Multiple title located on same position')
                     title = _title[0]
                     axis.set_title(title['text'])
 
-            if len(_graph):
+            elif len(_graph):
                 if len(_graph) > 1:
                     raise TypeError('Multiple graph located on same posiiton')
 
                 graph = _graph[0]
-                axis = fig.add_subplot(self.fig_row, self.fig_col, graph['position'])
-
 
                 graph_type = graph['settings']['type']
                 plt_settings = graph['sub_settings']
@@ -195,16 +242,16 @@ class Snapshot():
                         if data_num == last_data_num:
                             frame_array = np.arange(1, last_frame_num + 1, 1)
                             axis.plot(frame_array,
-                                      graph['data'][data_num]['frame_data'][:last_frame_num],
-                                      color=_color[data_num],
-                                      marker=_marker[data_num])
+                                    graph['data'][data_num]['frame_data'][:last_frame_num],
+                                    color=_color[data_num],
+                                    marker=_marker[data_num])
 
                         else:
                             frame_array = np.arange(1, graph['settings']['frame_in_rotation'] + 1, 1)
                             axis.plot(frame_array,
-                                      graph['data'][data_num]['frame_data'],
-                                      color=_color[data_num],
-                                      marker=_marker[data_num])
+                                    graph['data'][data_num]['frame_data'],
+                                    color=_color[data_num],
+                                    marker=_marker[data_num])
 
                 if len(_title):
                     if len(_title) > 1:
@@ -215,4 +262,5 @@ class Snapshot():
                 else:
                     pass #still not made
 
-
+            else:
+                axis.axis('off')
