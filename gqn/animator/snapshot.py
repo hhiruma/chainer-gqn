@@ -200,6 +200,12 @@ class Snapshot():
                     axis.set_xlim(1, graph['settings']['frame_in_rotation'])
                     axis.set_ylim(0, max([max([y for y in x['frame_data']]) for x in graph['data']]) + 0.1)
 
+                    if 'xscale' in plt_settings:
+                        if plt_settings['xscale'] in ['linear', 'log', 'symlog', 'logit']:
+                            axis.set_xscale(plt_settings['xscale'])
+                    if 'yscale' in plt_settings:
+                        if plt_settings['yscale'] in ['linear', 'log', 'symlog', 'logit']:
+                            axis.set_yscale(plt_settings['yscale'])
                     if 'colors' not in plt_settings:
                         raise TypeError('Plotting requires "colors" setting in trivial settings')
                     if not len(plt_settings['colors']) == graph['settings']['num_of_data_per_graph']:
