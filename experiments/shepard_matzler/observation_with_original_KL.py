@@ -173,6 +173,18 @@ def main():
 
                 for t in range(total_frames_per_rotation):
                     snapshot = gqn.animator.Snapshot((2, 4))
+                    # grid_master = GridSpec(nrows=2, ncols=4, height_ratios=[1, 1])
+                    # snapshot = gqn.animator.Snapshot(layout_settings={
+                    #     'subplot_count': 8,
+                    #     'grid_master': grid_master,
+                    #     'subplots': [
+                    #         {
+                    #             'subplot_id': i + 1,
+                    #             'subplot': GridSpecFromSubplotSpec(nrows=1, ncols=1, subplot_spec=grid_master[i//4, i%4])
+                    #         }
+                    #         for i in range(8)
+                    #     ]
+                    # })
 
                     for i in [1, 2, 5, 6]:
                         snapshot.add_media(
@@ -252,6 +264,18 @@ def main():
                     angle_rad = 0
                     for t in range(total_frames_per_rotation):
                         snapshot = gqn.animator.Snapshot((2, 4))
+                        # grid_master = GridSpec(nrows=2, ncols=4, height_ratios=[1, 1])
+                        # snapshot = gqn.animator.Snapshot(layout_settings={
+                        #     'subplot_count': 8,
+                        #     'grid_master': grid_master,
+                        #     'subplots': [
+                        #         {
+                        #             'subplot_id': i + 1,
+                        #             'subplot': GridSpecFromSubplotSpec(nrows=1, ncols=1, subplot_spec=grid_master[i//4, i%4])
+                        #         }
+                        #         for i in range(8)
+                        #     ]
+                        # })
 
                         for i, observed_image in zip([1, 2, 5, 6], observed_image_array):
                             snapshot.add_media(
