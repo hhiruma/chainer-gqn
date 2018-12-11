@@ -163,6 +163,8 @@ class Snapshot():
 
                 axis = fig.add_subplot(target_subplot[:, :])
             else:
+                if len(fig.axes) >= position and len(_graph):
+                    fig.delaxes(fig.axes[position-1])
                 axis = fig.add_subplot(self.fig_row, self.fig_col, position)
 
             if len(_media):
