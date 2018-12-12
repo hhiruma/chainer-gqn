@@ -264,10 +264,6 @@ def main():
                     snapshot = snapshot_array[0][i]
                     media = snapshot.get_subplot(3)
                     generated_pic_list.append(media['body'])
-                    # _media = [x for x in snapshot.media_list if x['media_position'] == 3]
-                    # if len(_media):
-                    #     media = _media[0]
-                    #     generated_pic_list.append(media['media_data'])
 
                 for i in range(len(generated_pic_list)):
                     figu = plt.figure()
@@ -277,6 +273,7 @@ def main():
 
 
                 file_number += 1
+
 
 
 if __name__ == "__main__":

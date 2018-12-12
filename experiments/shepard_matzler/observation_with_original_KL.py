@@ -373,6 +373,7 @@ def main():
                     media= _media['body']
                     picData.append(media['media_data'])
                     figu = plt.figure()
+                    plt.axis('off')
                     plt.imshow(media['media_data'])
                     plt.savefig("{}/shepard_matzler_{}/{}.png".format(
                         args.output_directory, file_number, i))
