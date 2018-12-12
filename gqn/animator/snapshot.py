@@ -202,6 +202,10 @@ class Snapshot():
                     axis.set_xlim(1, graph['settings']['frame_in_rotation'])
                     axis.set_ylim(0, max([max([y for y in x['frame_data']]) for x in graph['data']]) + 0.1)
 
+                    if 'noXTicks' in plt_settings:
+                        axis.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+                    if 'noYTicks' in plt_settings:
+                        axis.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
                     if 'xscale' in plt_settings:
                         if plt_settings['xscale'] in ['linear', 'log', 'symlog', 'logit']:
                             axis.set_xscale(plt_settings['xscale'])
