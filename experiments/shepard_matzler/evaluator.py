@@ -180,7 +180,7 @@ def main():
 
                 for t in range(total_frames_per_rotation):
                     grid_master = GridSpec(nrows=4, ncols=5, height_ratios=[1, 1, 1, 1])
-                    snapshot = gqn.animator.Snapshot(layout_settings={
+                    snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
                         'subplot_count': 14,
                         'grid_master': grid_master,
                         'subplots': [
@@ -269,7 +269,7 @@ def main():
                     angle_rad = 0
                     for t in range(total_frames_per_rotation):
                         grid_master = GridSpec(nrows=4, ncols=5, height_ratios=[1, 1, 1, 1])
-                        snapshot = gqn.animator.Snapshot(layout_settings={
+                        snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
                             'subplot_count': 14,
                             'grid_master': grid_master,
                             'subplots': [
