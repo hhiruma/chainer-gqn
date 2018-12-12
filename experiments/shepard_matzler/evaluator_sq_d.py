@@ -180,7 +180,7 @@ def main():
 
                 for t in range(total_frames_per_rotation):
                     grid_master = GridSpec(nrows=4, ncols=5, height_ratios=[1, 1, 1, 1])
-                    snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
+                    snapshot = gqn.animator.Snapshot(layout_settings={
                         'subplot_count': 14,
                         'grid_master': grid_master,
                         'subplots': [
@@ -217,11 +217,11 @@ def main():
                         generated_images_list.append(model.generate_image(
                             query_viewpoints, r, xp))
 
-                    kl_div_list = []
+                    sq_d_list = []
                     for generated_images in generated_images_list:
-                        kl_div_list.append(gqn.math.get_KL_div(
+                        sq_d_list.append(gqn.math.get_squared_distance(
                             to_cpu(current_scene_original_images[t]),
-                            to_cpu(generated_images[0])))
+                            to_cpu(generated_images[0]))[0])
 
 
                     snapshot.add_media(media_position=1  , media_type='image', media_data=make_uint8(generated_images[0]))
@@ -240,7 +240,7 @@ def main():
                         gqn.animator.Snapshot.add_graph_data(
                             graph_id='kl_div_graph_'+str(i),
                             data_id='kl_div_data_0',
-                            new_data=kl_div_list[i],
+                            new_data=sq_d_list[i],
                             frame_num=t,
                         )
                     print('snap')
@@ -269,7 +269,7 @@ def main():
                     angle_rad = 0
                     for t in range(total_frames_per_rotation):
                         grid_master = GridSpec(nrows=4, ncols=5, height_ratios=[1, 1, 1, 1])
-                        snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
+                        snapshot = gqn.animator.Snapshot(layout_settings={
                             'subplot_count': 14,
                             'grid_master': grid_master,
                             'subplots': [
@@ -306,11 +306,11 @@ def main():
                             generated_images_list.append(model.generate_image(
                                 query_viewpoints, r, xp))
 
-                        kl_div_list = []
+                        sq_d_list = []
                         for i, generated_images in enumerate(generated_images_list):
-                            kl_div_list.append(gqn.math.get_KL_div(
+                            sq_d_list.append(gqn.math.get_squared_distance(
                                 to_cpu(current_scene_original_images[t]),
-                                to_cpu(generated_images[0])))
+                                to_cpu(generated_images[0]))[0])
 
                         snapshot.add_media(media_position=1  , media_type='image', media_data=make_uint8(generated_images[0]))
                         snapshot.add_title(target_media_pos=1, text='Generated')
@@ -324,11 +324,12 @@ def main():
                         snapshot.add_media(media_position=4  , media_type='image', media_data=make_uint8(observed_image_array[m]))
                         snapshot.add_title(target_media_pos=4, text='Observed')
 
-                        for i, kl_div in enumerate(kl_div_list):
+                        # for i, kl_div in enumerate(kl_div_list):
+                        for i in range(10):
                             gqn.animator.Snapshot.add_graph_data(
                                 graph_id='kl_div_graph_'+str(i),
                                 data_id='kl_div_data_'+str(m+1),
-                                new_data=kl_div,
+                                new_data=sq_d_list[i],
                                 frame_num=t,
                             )
 
