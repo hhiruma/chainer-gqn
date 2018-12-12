@@ -200,7 +200,7 @@ class Snapshot():
 
                 if graph_type == 'plot':
                     axis.set_xlim(1, graph['settings']['frame_in_rotation'])
-                    axis.set_ylim(0, max([max([y for y in x['frame_data']]) for x in graph['data']]) + 0.1)
+                    axis.set_ylim(0, max([max([y for y in x['frame_data']]) for x in graph['data']]) * 1.1)
 
                     if 'noXTicks' in plt_settings:
                         axis.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
