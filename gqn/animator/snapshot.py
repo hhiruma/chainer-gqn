@@ -4,13 +4,14 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 class Snapshot():
     graph_list = []
 
-    def __init__(self, fig_shape=(), layout_settings={}):
+    def __init__(self, fig_shape=(), unify_ylim=False, layout_settings={}):
         self.media_list = []
         self.title_list = []
         if not fig_shape == ():
             self.fig_row = fig_shape[0]
             self.fig_col = fig_shape[1]
         self.use_grid = not layout_settings == {}
+        self.use_unified_ylim = unify_ylim
         self.layout_settings = layout_settings
             # expected shape
             # {
@@ -145,6 +146,9 @@ class Snapshot():
         else:
             position_range = int(self.fig_row * self.fig_col)
 
+        if self.use_unified_ylim:
+            y_max = max([max(d['frame_data']) for graph in Snapshot.graph_list for d in graph['data']])
+
         for i in range(position_range):
             position = i + 1
             _media = [x for x in self.media_list     if x['media_position']   == position]
@@ -200,7 +204,10 @@ class Snapshot():
 
                 if graph_type == 'plot':
                     axis.set_xlim(1, graph['settings']['frame_in_rotation'])
-                    axis.set_ylim(0, max([max([y for y in x['frame_data']]) for x in graph['data']]) + 0.1)
+
+                    if not self.use_unified_ylim:
+                        y_max = max([max([y for y in x['frame_data']]) for x in graph['data']]) * 1.1
+                    axis.set_ylim(0, y_max)
 
                     if 'noXTicks' in plt_settings:
                         axis.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
