@@ -4,6 +4,7 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 class Snapshot():
     graph_list = []
 
+
     def __init__(self, fig_shape=(), unify_ylim=False, layout_settings={}):
         self.media_list = []
         self.title_list = []

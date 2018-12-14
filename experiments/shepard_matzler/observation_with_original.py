@@ -258,7 +258,22 @@ def main():
                         args.output_directory, file_number),
                     writer="ffmpeg",
                     fps=12)
+
+                generated_pic_list =[]
+                for i in range((num_views_per_scene + 1) * total_frames_per_rotation):
+                    snapshot = snapshot_array[0][i]
+                    media = snapshot.get_subplot(3)
+                    generated_pic_list.append(media['body'])
+
+                for i in range(len(generated_pic_list)):
+                    figu = plt.figure()
+                    plt.imshow(generated_pic_list[i])
+                    plt.savefig("{}/shepard_matzler_{}_{}.jpg".format(
+                        args.output_directory, file_number, i))
+
+
                 file_number += 1
+
 
 
 if __name__ == "__main__":

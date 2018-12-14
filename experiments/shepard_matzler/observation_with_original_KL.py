@@ -358,7 +358,41 @@ def main():
                         args.output_directory, file_number),
                     writer="ffmpeg",
                     fps=12)
+
+
+
+
+                if not os.path.exists("{}/shepard_matzler_{}".format(args.output_directory, file_number)):
+                    os.mkdir("{}/shepard_matzler_{}".format(
+                        args.output_directory, file_number))
+
+                picData=[]
+                for i in range((num_views_per_scene) * total_frames_per_rotation):
+                    snapshot = snapshot_array[i+total_frames_per_rotation]
+                    _media = snapshot.get_subplot(3)
+                    media= _media['body']
+                    picData.append(media['media_data'])
+                    figu = plt.figure()
+                    plt.axis('off')
+                    plt.imshow(media['media_data'])
+                    plt.savefig("{}/shepard_matzler_{}/{}.png".format(
+                        args.output_directory, file_number, i))
+                    plt.close(figu)
+
+                bigfig = plt.figure(figsize=(20, 10))
+                for i in range(num_views_per_scene):
+                    for j in range(total_frames_per_rotation):
+                        plt.subplot(num_views_per_scene,total_frames_per_rotation,(i*total_frames_per_rotation+j+1))
+                        plt.axis('off')
+                        plt.imshow(picData[i*total_frames_per_rotation+j])
+                plt.savefig("{}/shepard_matzler_{}_ALL.png".format(
+                    args.output_directory, file_number))
+                plt.close(bigfig)
+
+
+
                 file_number += 1
+
 
 
 if __name__ == "__main__":
