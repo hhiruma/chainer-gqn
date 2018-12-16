@@ -53,7 +53,7 @@ def main():
         cuda.get_device(args.gpu_device).use()
         xp = cupy
 
-    dataset = gqn.data.Dataset(args.dataset_directory)
+    dataset = gqn.data.Dataset(args.dataset_directory, use_original_images=False)
 
     hyperparams = HyperParameters()
     hyperparams.generator_share_core = args.generator_share_core
@@ -124,7 +124,7 @@ def main():
             for batch_index, data_indices in enumerate(iterator):
                 # shape: (batch, views, height, width, channels)
                 # range: [-1, 1]
-                images, viewpoints, _original_images = subset[data_indices]
+                images, viewpoints = subset[data_indices]
 
                 # (batch, views, height, width, channels) -> (batch, views, channels, height, width)
                 images = images.transpose((0, 1, 4, 2, 3)).astype(np.float32)
