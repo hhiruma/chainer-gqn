@@ -6,8 +6,9 @@ from .subset import Subset
 
 
 class Dataset():
-    def __init__(self, directory):
+    def __init__(self, directory, use_original_images):
         self.directory = directory
+        self.use_original_images = use_original_images
         self.current_subset_index = 0
         self.subset_filenames = []
         files = os.listdir(os.path.join(self.directory, "images"))
@@ -32,8 +33,11 @@ class Dataset():
         images_npy_path = os.path.join(self.directory, "images", filename)
         viewpoints_npy_path = os.path.join(self.directory, "viewpoints",
                                            filename)
-        original_images_npy_path = os.path.join(self.directory, "original_images", filename)
-        subset = Subset(images_npy_path, viewpoints_npy_path, original_images_npy_path)
+        if self.use_original_images:
+            original_images_npy_path = os.path.join(self.directory, "original_images", filename)
+            subset = Subset(images_npy_path, viewpoints_npy_path, original_images_npy_path)
+        else:
+            subset = Subset(images_npy_path, viewpoints_npy_path)
         return subset
 
     def __len__(self):
