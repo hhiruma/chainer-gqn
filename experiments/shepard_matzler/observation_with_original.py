@@ -79,7 +79,7 @@ def add_annotation(axis, array):
 
 def func_anim_upate(i, fig, snapshot_array):
     snapshot = snapshot_array[0][i]
-    snapshot.print_to_fig(fig)
+    snapshot.print_to_fig(fig, frame_num=i)
 
 
 def main():
