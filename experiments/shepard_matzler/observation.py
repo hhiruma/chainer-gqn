@@ -140,7 +140,7 @@ def main():
 
                 # shape: (batch, views, height, width, channels)
                 # range: [-1, 1]
-                images, viewpoints = subset[data_indices]
+                images, viewpoints, original_images = subset[data_indices]
 
                 # (batch, views, height, width, channels) -> (batch, views, channels, height, width)
                 images = images.transpose((0, 1, 4, 2, 3)).astype(np.float32)
