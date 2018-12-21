@@ -53,7 +53,7 @@ def main():
         cuda.get_device(args.gpu_device).use()
         xp = cupy
 
-    dataset = gqn.data.Dataset(args.dataset_directory)
+    dataset = gqn.data.Dataset(args.dataset_directory, use_original_images=False)
 
     hyperparams = HyperParameters()
     hyperparams.generator_share_core = args.generator_share_core
