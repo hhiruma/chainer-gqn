@@ -1,3 +1,7 @@
+###########################################3
+#   内容：GQNのモデルの定義
+###########################################3
+
 import os
 import sys
 import uuid
@@ -17,26 +21,62 @@ from hyperparams import HyperParameters
 class Model():
     def __init__(self, hyperparams: HyperParameters, snapshot_directory=None):
         assert isinstance(hyperparams, HyperParameters)
+        # ジェネレーターのLSTMの数
         self.generation_steps = hyperparams.generator_generation_steps
+        # ハイパーパラメータを格納
         self.hyperparams = hyperparams
+        # モデルを保存しやすいようにネットワークのパーツをまとめて入れておく入れ物
         self.parameters = chainer.ChainList()
 
+
+        # Generator Networkの生成（デコーダー）
+        #  返り値：
+        #     generation_cores：
+        #           デコーダーのLSTMの部分が入ってる
+        #     generation_priors：
+        #           潜在変数zを作る元になる平均と分散を出力する（つまり分布）
+        #           Priorの名が示すとおり潜在変数の <<事前分布>>
+        #     generation_upsamplers：
+        #           LSTMの出力をアップサンプルするLink.
+        #           LSTMのSkip connectionを担うuに代入する際アップサンプルシたものを使う
+        #     generation_map_u_x：
+        #           upsamplerから帰ってきたものを画像に変換するときもある
+        #           （基本的に16チャンネル担っててそれを3チャンネルに治す
         self.generation_cores, self.generation_priors, self.generation_upsamplers, self.generation_map_u_x = self.build_generation_network(
             generation_steps=self.generation_steps,
             h_channels=hyperparams.h_channels,
             z_channels=hyperparams.z_channels,
             u_channels=hyperparams.generator_u_channels)
 
+
+        # Inference Networkの生成（エンコーダー）
+        #  返り値:
+        #      inference_cores:
+        #            エンコーダーのLSTMの部分が入ってる
+        #      inference_posteriors:
+        #           潜在変数zを作る元になる平均と分散を出力する（つまり分布）
+        #           Posteriorの名前が示すとおり潜在変数の <<事後分布>>
+        #      inference_downsampler_x:
+        #           入力の画像xをダウンサンプルするLink
+        #           LSTMに入れられるようにダウンサンプルする必要がある
         self.inference_cores, self.inference_posteriors, self.inference_downsampler_x = self.build_inference_network(
             generation_steps=self.generation_steps,
             h_channels=hyperparams.h_channels,
             z_channels=hyperparams.z_channels,
             downsampler_channels=hyperparams.inference_downsampler_channels)
 
+
+        # Representation Networkの生成（Representationの生成ネットワーク)
+        # 返り値：
+        #      representation_network:
+        #           ネットワーク本体（CNN)
+        #           指定したアーキテクチャのものが帰ってくる
         self.representation_network = self.build_representation_network(
             architecture=hyperparams.representation_architecture,
             r_channels=hyperparams.representation_channels)
 
+
+        # スナップショットディレクトリが指定されていればソロを読み込む
         if snapshot_directory:
             try:
                 filepath = os.path.join(snapshot_directory, self.filename)
@@ -46,11 +86,24 @@ class Model():
             except Exception as error:
                 print(error)
 
+
+    # generation のネットワークを生成する
     def build_generation_network(self, generation_steps, h_channels,
                                  z_channels, u_channels):
+        # 生成したものを入れておくリスト
+        #    以下生成時にself.parametersにも入れる。
+        #    parametersの中にあるやつが最終的にファイルに保存される。
+        #    このリストに入れておくとがあとからメソッドで特定のLinkを呼び出しやすい。
+        #    self.parametersにappendするLinkオブジェクトとcore_arrayなどにappendする
+        #    オブジェクトはpythonの「共有渡し」という性質により共有される。
+        #    故に片方の重みが更新されればもう片方も自動的に更新される。
+
         core_array = []
         prior_array = []
         upsampler_h_u_array = []
+
+        # Chain List登録するのためにはLinkをinit_scope内で登録する必要がある
+        #    こうやって登録しないとbackwardsでLinkの重みが更新されない
         with self.parameters.init_scope():
             # LSTM core
             num_cores = 1 if self.hyperparams.generator_share_core else generation_steps
@@ -94,10 +147,22 @@ class Model():
 
         return core_array, prior_array, upsampler_h_u_array, map_u_x
 
+    # inference のネットワークを生成する
     def build_inference_network(self, generation_steps, h_channels, z_channels,
                                 downsampler_channels):
+        # 生成したものを入れておくリスト
+        #    以下生成時にself.parametersにも入れる。
+        #    parametersの中にあるやつが最終的にファイルに保存される
+        #    このリストに入れておくとがあとからメソッドで特定のLinkを呼び出しやすい
+        #    self.parametersにappendするLinkオブジェクトとcore_arrayなどにappendする
+        #    オブジェクトはpythonの「共有渡し」という性質により共有される。
+        #    故に片方の重みが更新されればもう片方も自動的に更新される。
+
         core_array = []
         posterior_array = []
+
+        # Chain List登録するのためにはLinkをinit_scope内で登録する必要がある
+        #    こうやって登録しないとbackwardsでLinkの重みが更新されない
         with self.parameters.init_scope():
             num_cores = 1 if self.hyperparams.inference_share_core else generation_steps
             for t in range(num_cores):
@@ -120,6 +185,7 @@ class Model():
 
         return core_array, posterior_array, downsampler_x_h
 
+    # representation のネットワークを生成する
     def build_representation_network(self, architecture, r_channels):
         if architecture == "tower":
             layer = gqn.nn.representation.TowerNetwork(r_channels=r_channels)

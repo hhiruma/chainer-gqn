@@ -1,3 +1,7 @@
+###########################################3
+#   内容：GQNの学習
+###########################################3
+
 import argparse
 import math
 import os
@@ -42,19 +46,28 @@ def to_cpu(array):
 
 
 def main():
+    # スナップショットの保存場所の確保
     try:
         os.mkdir(args.snapshot_directory)
     except:
         pass
 
+
+
+    # xpとは：　numpy か cupyを格納する変数（条件分岐でxpにモジュールをそのまま格納する為の変数）
     xp = np
     using_gpu = args.gpu_device >= 0
     if using_gpu:
         cuda.get_device(args.gpu_device).use()
         xp = cupy
 
+
+    # コマンドライン引数で指定したデータセットのパスからデータセットを読み込む
+    #   このコードではoriginal_imagesを使わないのでdatasetに読み込まないよう指定している
     dataset = gqn.data.Dataset(args.dataset_directory, use_original_images=False)
 
+
+    # ハイパーパラメータにコマンドライン引数の値を入れていく
     hyperparams = HyperParameters()
     hyperparams.generator_share_core = args.generator_share_core
     hyperparams.generator_share_prior = args.generator_share_prior
@@ -74,20 +87,41 @@ def main():
     hyperparams.save(args.snapshot_directory)
     print(hyperparams)
 
+
+    # 上のハイパーパラメータを元にモデルを定義する　　（--> ./Model.pyへ)
     model = Model(hyperparams, snapshot_directory=args.snapshot_directory)
     if using_gpu:
         model.to_gpu()
 
+    # モデルのparametersに登録されているすべてのLinkにAdamOptimizerをセットする  (--> ./optimizer.pyへ)
     optimizer = AdamOptimizer(
         model.parameters, mu_i=args.initial_lr, mu_f=args.final_lr)
     print(optimizer)
 
+    # スケジューラーを設定する
+    #   学習の最初から最後にかけて、学習状況に変わらず変化させるパラメーターの管理をする
+    #   扱っているパラメーター：
+    #      ロスを計算するときの見ている範囲を決定する
+    #      最初はpixel_varianceは大きくして、最後に行くに連れて小さくしていく
+    #      Schedulerはミニバッチを入力する毎に.step()で更新される
+    #
+    #   ロスに与える影響：
+    #      ロスが
+    #         画像の対数尤度
+    #            と
+    #         inferenceの事前分布とgeneratorの事後分布のKL Divergence
+    #      の和で表現されるが、画像の対数尤度をpixel_varianceで割ることで
+    #
+    #      最初は画像を大雑把に見たときのロス
+    #      最後は画像をより細かく見たときのロス
+    #      を計算するようになる
     scheduler = Scheduler(
         sigma_start=args.initial_pixel_variance,
         sigma_end=args.final_pixel_variance,
         final_num_updates=args.pixel_n)
     print(scheduler)
 
+    # 上記スケジューラーのpixel_varianceを学習で使える形の多次元配列の全要素に反映
     pixel_var = xp.full(
         (args.batch_size, 3) + hyperparams.image_size,
         scheduler.pixel_variance**2,
@@ -96,8 +130,10 @@ def main():
         (args.batch_size, 3) + hyperparams.image_size,
         math.log(scheduler.pixel_variance**2),
         dtype="float32")
+    # 縦x横x３チャンネルで、画像のピクセルの総数を入れる
     num_pixels = hyperparams.image_size[0] * hyperparams.image_size[1] * 3
 
+    # おそらくVisualize用のpyplotの設定
     fig = plt.figure(figsize=(9, 3))
     axis_data = fig.add_subplot(1, 3, 1)
     axis_data.set_title("Data")
@@ -110,6 +146,7 @@ def main():
     axis_generation.axis("off")
 
     current_training_step = 0
+    # 学習開始: エポック数分
     for iteration in range(args.training_iterations):
         mean_kld = 0
         mean_nll = 0
@@ -118,27 +155,42 @@ def main():
         total_num_batch = 0
         start_time = time.time()
 
+        # サブセットに分ける(ディレクトリ内のファイルの数分だけのサブセットに分ける）
         for subset_index, subset in enumerate(dataset):
+            # ファイル内のデータをを取り出せるような機構に入れる
             iterator = gqn.data.Iterator(subset, batch_size=args.batch_size)
 
+            # バッチサイズに合わせて自動でバッチ毎のデータの数を決めて取り出してくれる
             for batch_index, data_indices in enumerate(iterator):
                 # shape: (batch, views, height, width, channels)
                 # range: [-1, 1]
                 images, viewpoints = subset[data_indices]
 
                 # (batch, views, height, width, channels) -> (batch, views, channels, height, width)
+                # 学習がしやすいようにデータの構造を変形する
                 images = images.transpose((0, 1, 4, 2, 3)).astype(np.float32)
                 images = images / 255.0
 
+                # バッチごとに割り当てられているviewの数
                 total_views = images.shape[1]
 
                 # Sample number of views
+                #   持っているviewの中からいくつ用いるか
                 num_views = random.choice(range(total_views + 1))
+                #   持っているveiwの数の長さのリスト（0からtotal_view-1まで）
                 observation_view_indices = list(range(total_views))
+                #   上記のリストをランダムに入れ替える
                 random.shuffle(observation_view_indices)
+                #   ランダムに入れ替えたリストからnum_views子だけ取り出す
                 observation_view_indices = observation_view_indices[:num_views]
                 query_index = random.choice(range(total_views))
 
+
+                # observation_view_indicies： representationを計算する用の画像
+                # query_index: クエリとして入力する画像のインデックス
+
+                # num_viewsが0以上なら決まったindex番号の画像でrepresentationを計算
+                # なければ決まったサイズですべて0の値のrepresentationを生成する
                 if num_views > 0:
                     representation = model.compute_observation_representation(
                         images[:, observation_view_indices],
@@ -151,6 +203,7 @@ def main():
                         representation_shape, dtype=xp.float32)
                     representation = chainer.Variable(representation)
 
+                # クエリとして入力する画像と視点情報をスライスしてリストとして保存
                 query_images = images[:, query_index]
                 query_viewpoints = viewpoints[:, query_index]
 
@@ -159,15 +212,34 @@ def main():
                 query_viewpoints = to_gpu(query_viewpoints)
 
                 # Add noise
+                # ノイズを加えると精度が上がるらしい
                 query_images += xp.random.uniform(
                     0, 1.0 / 256.0, size=query_images.shape).astype(xp.float32)
 
+                # 計算したrepresentationとクエリを用いて計算
+                # 返り値:  (詳しくは ./Models.py参照）
+                #    z_t_param_array:
+                #       infereneとgenerationからみた潜在変数zに関する情報
+                #       各要素が以下の構造のタプルから構成されるリスト
+                #         (mean_z_q, ln_var_z_q, mean_z_p, ln_var_z_p)
+                #
+                #       mean_z_q, ln_var_z_q:
+                #          inferenceの事前分布の平均と分散
+                #       mean_z_p, ln_var_z_p:
+                #          generatorの事後分布の平均と分散
+                #       ちなみにリストになってるのは用いてるLSTMの出力の数だけロスを計算しているから
+                #
+                #    mean_x:
+                #       generatorで生成された結果をアップサンプルし、
+                #       チャンネル数を３に揃えた出力
+                #         --> 出力画像
                 z_t_param_array, mean_x = model.sample_z_and_x_params_from_posterior(
                     query_images, query_viewpoints, representation)
 
                 # Compute loss
                 ## KL Divergence
                 loss_kld = 0
+                # 上で計算した潜在変数zに関する情報１つずつのKL Divergenceを計算して足し上げる
                 for params in z_t_param_array:
                     mean_z_q, ln_var_z_q, mean_z_p, ln_var_z_p = params
                     kld = gqn.functions.gaussian_kl_divergence(
@@ -175,6 +247,7 @@ def main():
                     loss_kld += cf.sum(kld)
 
                 ## Negative log-likelihood of generated image
+                #　対数尤度の計算
                 loss_nll = cf.sum(
                     gqn.functions.gaussian_negative_log_likelihood(
                         query_images, mean_x, pixel_var, pixel_ln_var))
@@ -183,9 +256,23 @@ def main():
                 loss_nll = loss_nll / args.batch_size
                 loss_kld = loss_kld / args.batch_size
 
+                # 全体のロスを計算する
+                #   上述したとおり対数尤度をpixel_varianceで割ることでロスを考える範囲を変えている
                 loss = loss_nll / scheduler.pixel_variance + loss_kld
 
+                # モデルの勾配を一度消す
                 model.cleargrads()
+                # 計算したロスから誤差逆伝播法で重みをすべて更新していく
+                #   この時にModelのオブジェクトで更新されるのはchainer.chainList
+                #   オブジェクトであるself.parametersに登録したもののみ
+                #   sample_z_and_x_params_from_posteriorのメソッド内を見ると分かる通り
+                #   実際計算で用いられているのはself.generation_coresなど別のリストに
+                #   格納されているLink.
+                #   しかし、Linkの登録時に同じものをself.parametersに登録してあるので
+                #   計算直接呼び出していなくてもちゃんと「self.parametersの重み」は
+                #   更新される
+                #   （なんでかは ./Models.pyのbuild_generation_networkと
+                #    build_inference_networkのコメント参照)
                 loss.backward()
                 optimizer.update(current_training_step)
 
@@ -205,6 +292,8 @@ def main():
                            optimizer.learning_rate, scheduler.pixel_variance,
                            current_training_step))
 
+                # スケジューラーの勧めてpixel_varianceの値を更新する
+                #  更新するほどpixel_variance(=分散)の値が小さくなって細かく見るようになる
                 scheduler.step(current_training_step)
                 pixel_var[...] = scheduler.pixel_variance**2
                 pixel_ln_var[...] = math.log(scheduler.pixel_variance**2)
@@ -216,6 +305,7 @@ def main():
                 mean_mse += loss_mse
                 mean_elbo += elbo
 
+            # なんでここで一旦シリアライズ（保存）しているんだろうか...?
             model.serialize(args.snapshot_directory)
 
             # Visualize
@@ -240,6 +330,7 @@ def main():
                    mean_kld / total_num_batch, optimizer.learning_rate,
                    scheduler.pixel_variance, current_training_step,
                    elapsed_time / 60))
+        #最後にモデルをシリアライズ（保存）して終了
         model.serialize(args.snapshot_directory)
 
 
