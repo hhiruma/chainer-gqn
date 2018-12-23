@@ -105,11 +105,10 @@ def main():
         model.to_gpu()
 
     plt.style.use("dark_background")
-    fig = plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(13, 8))
 
     num_views_per_scene = 4
-    num_generation = 2 # lessened from 4 to 2 (remaining 2 used for original outpu)
-    num_original = 2
+    num_generation = 2
     total_frames_per_rotation = 24
 
     image_shape = (3, ) + hyperparams.image_size
@@ -121,13 +120,7 @@ def main():
             iterator_1 = gqn.data.Iterator(subset_1, batch_size=1)
             iterator_2 = gqn.data.Iterator(subset_2, batch_size=1)
 
-            i = 0
             for data_indices_1, data_indices_2 in zip(iterator_1, iterator_2):
-                #
-                if i == 0:
-                    i += 1
-                    continue
-                #
                 snapshot_array = []
 
                 observed_image_array_1 = xp.zeros(
@@ -218,7 +211,8 @@ def main():
                     num_of_data_per_graph=2,
                     trivial_settings={
                         'colors': ['red', 'blue'],
-                        'markers': ['', '']
+                        'markers': ['', ''],
+                        'legends': ['Test', 'Train']
                     }
                 )
 
@@ -226,6 +220,7 @@ def main():
                 sq_d_sums_2 = [0 for i in range(5)]
                 for t in range(total_frames_per_rotation):
                     grid_master = GridSpec(nrows=4, ncols=8, height_ratios=[1,1,1,1])
+                    grid_master.update(wspace=0.5, hspace=0.8)
                     snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
                         'subplot_count': 13,
                         'grid_master': grid_master,
@@ -252,11 +247,10 @@ def main():
                             media_data=make_uint8(blank_image),
                             media_position=i
                         )
-                        if i == 1 or i == 7:
-                            snapshot.add_title(
-                                text='Observed',
-                                target_media_pos=i
-                            )
+                        if i == 1:
+                            snapshot.add_title(text='Test',target_media_pos=i)
+                        if i == 7:
+                            snapshot.add_title(text='Train', target_media_pos=i)
 
                     query_viewpoints = rotate_query_viewpoint(
                         angle_rad, num_generation, xp)
@@ -282,7 +276,7 @@ def main():
                             media_position=i
                         )
                         snapshot.add_title(
-                            text='train data (1)',
+                            text='GQN Output',
                             target_media_pos=i
                         )
 
@@ -293,11 +287,11 @@ def main():
                             media_position=i
                         )
                         snapshot.add_title(
-                            text='test data (2)',
+                            text='GQN Output',
                             target_media_pos=i
                         )
 
-                    for i in [6]:
+                    for i in [6, 12]:
                         snapshot.add_title(
                             text='Squared Distance',
                             target_media_pos=i
@@ -322,8 +316,7 @@ def main():
                         data_id='sq_d_data_0',
                         new_data=sq_d_sums_1[0],
                         frame_num=t
-                    )
-
+                    ) 
                     gqn.animator.Snapshot.add_graph_data(
                         graph_id='sq_d_avg_graph',
                         data_id='sq_d_data_1',
@@ -334,7 +327,6 @@ def main():
                     snapshot_array.append(snapshot)
 
                     angle_rad += 2 * math.pi / total_frames_per_rotation
-
 
 
                 # Generate images with observations
@@ -363,6 +355,7 @@ def main():
                     angle_rad = 0
                     for t in range(total_frames_per_rotation):
                         grid_master = GridSpec(nrows=4, ncols=8, height_ratios=[1,1,1,1])
+                        grid_master.update(wspace=0.5, hspace=0.8)
                         snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
                             'subplot_count': 13,
                             'grid_master': grid_master,
@@ -390,10 +383,7 @@ def main():
                                 media_position=i
                             )
                             if i == 1:
-                                snapshot.add_title(
-                                    text='Observed',
-                                    target_media_pos=i
-                                )
+                                snapshot.add_title(text='Test', target_media_pos=i)
 
                         for i, observed_image in zip([7, 8, 9, 10], observed_image_array_2):
                             snapshot.add_media(
@@ -402,10 +392,7 @@ def main():
                                 media_position=i
                             )
                             if i == 7:
-                                snapshot.add_title(
-                                    text='Observed',
-                                    target_media_pos=i
-                                )
+                                snapshot.add_title(text='Train', target_media_pos=i)
 
                         query_viewpoints = rotate_query_viewpoint(
                             angle_rad, num_generation, xp)
@@ -431,7 +418,7 @@ def main():
                                 media_position=i
                             )
                             snapshot.add_title(
-                                text='Generated (1)',
+                                text='GQN Output',
                                 target_media_pos=i
                             )
 
@@ -442,11 +429,11 @@ def main():
                                 media_position=i
                             )
                             snapshot.add_title(
-                                text='Generated (2)',
+                                text='GQN Output',
                                 target_media_pos=i
                             )
 
-                        for i in [6]:
+                        for i in [6, 12]:
                             snapshot.add_title(
                                 text='Squared Distance',
                                 target_media_pos=i
