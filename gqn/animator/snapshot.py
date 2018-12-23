@@ -112,10 +112,13 @@ class Snapshot():
     def make_graph(self, id: str,
                        pos: int,
                        graph_type: str,
+                       mode: str,
                        frame_in_rotation: int,
                        num_of_data_per_graph=1,
                        layout_settings={},
                        trivial_settings={}):
+        assert graph_type in {'plot'}
+        assert mode in {'sequential', 'simultaneous'}
 
         for graph in Snapshot.graph_list:
             if graph['id'] == id:
@@ -135,6 +138,7 @@ class Snapshot():
             'position': pos,
             'settings': {
                 'type': graph_type,
+                'mode': mode,
                 'frame_in_rotation': frame_in_rotation,
                 'num_of_data_per_graph': num_of_data_per_graph
             },
@@ -231,24 +235,37 @@ class Snapshot():
                     _color = plt_settings['colors']
                     _marker = plt_settings['markers']
 
-                    last_data_num = int(frame_num / graph['settings']['frame_in_rotation'])
-                    last_frame_num = frame_num % graph['settings']['frame_in_rotation'] + 1
 
-                    for data_num in range(last_data_num + 1):
-                        frame_array = []
-                        if data_num == last_data_num:
-                            frame_array = np.arange(1, last_frame_num + 1, 1)
-                            axis.plot(frame_array,
-                                    graph['data'][data_num]['frame_data'][:last_frame_num],
-                                    color=_color[data_num],
-                                    marker=_marker[data_num])
+                    if graph['settings']['mode'] == 'sequential':
+                        last_data_num = int(frame_num / graph['settings']['frame_in_rotation'])
+                        last_frame_num = frame_num % graph['settings']['frame_in_rotation'] + 1
 
-                        else:
-                            frame_array = np.arange(1, graph['settings']['frame_in_rotation'] + 1, 1)
+                        for data_num in range(last_data_num + 1):
+                            frame_array = []
+                            if data_num == last_data_num:
+                                frame_array = np.arange(1, last_frame_num + 1, 1)
+                                axis.plot(frame_array,
+                                        graph['data'][data_num]['frame_data'][:last_frame_num],
+                                        color=_color[data_num],
+                                        marker=_marker[data_num])
+
+                            else:
+                                frame_array = np.arange(1, graph['settings']['frame_in_rotation'] + 1, 1)
+                                axis.plot(frame_array,
+                                        graph['data'][data_num]['frame_data'],
+                                        color=_color[data_num],
+                                        marker=_marker[data_num])
+
+                    elif graph['settings']['mode'] == 'simultaneous':
+                        for data_num in range(graph['settings']['num_of_data_per_graph']):
+                            frame_array = np.arange(1, frame_num + 1, 1)
                             axis.plot(frame_array,
-                                    graph['data'][data_num]['frame_data'],
-                                    color=_color[data_num],
-                                    marker=_marker[data_num])
+                                      graph['data'][data_num]['frame_data'][:frame_num],
+                                      color=_color[data_num],
+                                      marker=_marker[data_num])
+
+                    else:
+                        raise TypeError('Specified graph mode "' + graph['settings']['mode'] + '" is not implemented')
 
                 if len(_title):
                     if len(_title) > 1:
