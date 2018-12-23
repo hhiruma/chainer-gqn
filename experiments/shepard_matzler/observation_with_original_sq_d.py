@@ -95,7 +95,7 @@ def main():
         cuda.get_device(args.gpu_device).use()
         xp = cupy
 
-    dataset = gqn.data.Dataset(args.dataset_path)
+    dataset = gqn.data.Dataset(args.dataset_path, use_original_images=True)
 
     hyperparams = HyperParameters(snapshot_directory=args.snapshot_path)
     model = Model(hyperparams, snapshot_directory=args.snapshot_path)
