@@ -105,11 +105,10 @@ def main():
         model.to_gpu()
 
     plt.style.use("dark_background")
-    fig = plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(13, 8))
 
     num_views_per_scene = 4
-    num_generation = 2 # lessened from 4 to 2 (remaining 2 used for original outpu)
-    num_original = 2
+    num_generation = 2
     total_frames_per_rotation = 24
 
     image_shape = (3, ) + hyperparams.image_size
@@ -121,13 +120,7 @@ def main():
             iterator_1 = gqn.data.Iterator(subset_1, batch_size=1)
             iterator_2 = gqn.data.Iterator(subset_2, batch_size=1)
 
-            i = 0
             for data_indices_1, data_indices_2 in zip(iterator_1, iterator_2):
-                #
-                if i == 0:
-                    i += 1
-                    continue
-                #
                 snapshot_array = []
 
                 observed_image_array_1 = xp.zeros(
@@ -212,13 +205,15 @@ def main():
                 gqn.animator.Snapshot.make_graph(
                     id='sq_d_avg_graph',
                     pos=13,
-                    graph_type='plot',
+                    graph_type='bar',
                     mode='simultaneous',
-                    frame_in_rotation=total_frames_per_rotation*5,
+                    frame_in_rotation=5,
+                    frame_per_cycle=total_frames_per_rotation,
                     num_of_data_per_graph=2,
                     trivial_settings={
                         'colors': ['red', 'blue'],
-                        'markers': ['', '']
+                        'markers': ['', ''],
+                        'legends': ['Test', 'Train']
                     }
                 )
 
@@ -226,6 +221,7 @@ def main():
                 sq_d_sums_2 = [0 for i in range(5)]
                 for t in range(total_frames_per_rotation):
                     grid_master = GridSpec(nrows=4, ncols=8, height_ratios=[1,1,1,1])
+                    grid_master.update(wspace=0.5, hspace=0.8)
                     snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
                         'subplot_count': 13,
                         'grid_master': grid_master,
@@ -252,11 +248,10 @@ def main():
                             media_data=make_uint8(blank_image),
                             media_position=i
                         )
-                        if i == 1 or i == 7:
-                            snapshot.add_title(
-                                text='Observed',
-                                target_media_pos=i
-                            )
+                        if i == 1:
+                            snapshot.add_title(text='Test',target_media_pos=i)
+                        if i == 7:
+                            snapshot.add_title(text='Train', target_media_pos=i)
 
                     query_viewpoints = rotate_query_viewpoint(
                         angle_rad, num_generation, xp)
@@ -268,12 +263,12 @@ def main():
                     total_sq_d_1, _ = gqn.math.get_squared_distance(
                         to_cpu(current_scene_original_images_1[t]),
                         to_cpu(generated_images_1[0]))
-                    sq_d_sums_1[0] = (sq_d_sums_1[0] * t + total_sq_d_1 ) / (t + 1)
+                    sq_d_sums_1[0] += total_sq_d_1
 
                     total_sq_d_2, _ = gqn.math.get_squared_distance(
                         to_cpu(current_scene_original_images_2[t]),
                         to_cpu(generated_images_2[0]))
-                    sq_d_sums_2[0] = (sq_d_sums_2[0] * t + total_sq_d_2 ) / (t + 1)
+                    sq_d_sums_2[0] += total_sq_d_2
 
                     for i in [5]:
                         snapshot.add_media(
@@ -282,7 +277,7 @@ def main():
                             media_position=i
                         )
                         snapshot.add_title(
-                            text='train data (1)',
+                            text='GQN Output',
                             target_media_pos=i
                         )
 
@@ -293,11 +288,11 @@ def main():
                             media_position=i
                         )
                         snapshot.add_title(
-                            text='test data (2)',
+                            text='GQN Output',
                             target_media_pos=i
                         )
 
-                    for i in [6]:
+                    for i in [6, 12]:
                         snapshot.add_title(
                             text='Squared Distance',
                             target_media_pos=i
@@ -317,24 +312,52 @@ def main():
                         frame_num=t,
                     )
 
-                    gqn.animator.Snapshot.add_graph_data(
-                        graph_id='sq_d_avg_graph',
-                        data_id='sq_d_data_0',
-                        new_data=sq_d_sums_1[0],
-                        frame_num=t
-                    )
-
-                    gqn.animator.Snapshot.add_graph_data(
-                        graph_id='sq_d_avg_graph',
-                        data_id='sq_d_data_1',
-                        new_data=sq_d_sums_2[0],
-                        frame_num=t
-                    )
+                    if t == total_frames_per_rotation - 1:
+                      sq_d_sums_1[0] /= total_frames_per_rotation
+                      sq_d_sums_2[0] /= total_frames_per_rotation
+                      gqn.animator.Snapshot.add_graph_data(
+                          graph_id='sq_d_avg_graph',
+                          data_id='sq_d_data_0',
+                          new_data=sq_d_sums_1[0],
+                          frame_num=0
+                      ) 
+                      gqn.animator.Snapshot.add_graph_data(
+                          graph_id='sq_d_avg_graph',
+                          data_id='sq_d_data_1',
+                          new_data=sq_d_sums_2[0],
+                          frame_num=0
+                      )
 
                     snapshot_array.append(snapshot)
 
                     angle_rad += 2 * math.pi / total_frames_per_rotation
 
+
+                ## test ##############
+               #plt.subplots_adjust(
+               #    left=None,
+               #    bottom=None,
+               #    right=None,
+               #    top=None,
+               #    wspace=0,
+               #    hspace=0)
+
+               #anim = animation.FuncAnimation(
+               #    fig,
+               #    func_anim_upate,
+               #    fargs = (fig, [snapshot_array]),
+               #    interval=1/24,
+               #    frames=total_frames_per_rotation
+               #)
+
+               #anim.save(
+               #    "{}/shepard_matzler_{}.mp4".format(
+               #        args.output_directory, file_number),
+               #    writer="ffmpeg",
+               #    fps=12)
+               #file_number += 1
+               #continue
+                ########################
 
 
                 # Generate images with observations
@@ -363,6 +386,7 @@ def main():
                     angle_rad = 0
                     for t in range(total_frames_per_rotation):
                         grid_master = GridSpec(nrows=4, ncols=8, height_ratios=[1,1,1,1])
+                        grid_master.update(wspace=0.5, hspace=0.8)
                         snapshot = gqn.animator.Snapshot(unify_ylim=True, layout_settings={
                             'subplot_count': 13,
                             'grid_master': grid_master,
@@ -390,10 +414,7 @@ def main():
                                 media_position=i
                             )
                             if i == 1:
-                                snapshot.add_title(
-                                    text='Observed',
-                                    target_media_pos=i
-                                )
+                                snapshot.add_title(text='Test', target_media_pos=i)
 
                         for i, observed_image in zip([7, 8, 9, 10], observed_image_array_2):
                             snapshot.add_media(
@@ -402,10 +423,7 @@ def main():
                                 media_position=i
                             )
                             if i == 7:
-                                snapshot.add_title(
-                                    text='Observed',
-                                    target_media_pos=i
-                                )
+                                snapshot.add_title(text='Train', target_media_pos=i)
 
                         query_viewpoints = rotate_query_viewpoint(
                             angle_rad, num_generation, xp)
@@ -417,12 +435,12 @@ def main():
                         total_sq_d_1, _ = gqn.math.get_squared_distance(
                             to_cpu(current_scene_original_images_1[t]),
                             to_cpu(generated_images_1[0]))
-                        sq_d_sums_1[m+1] = (sq_d_sums_1[m+1] * t + total_sq_d_1 ) / (t + 1)
+                        sq_d_sums_1[m+1] += total_sq_d_1
 
                         total_sq_d_2, _ = gqn.math.get_squared_distance(
                             to_cpu(current_scene_original_images_2[t]),
                             to_cpu(generated_images_2[0]))
-                        sq_d_sums_2[m+1] = (sq_d_sums_2[m+1] * t + total_sq_d_2 ) / (t + 1)
+                        sq_d_sums_2[m+1] += total_sq_d_2
 
                         for i in [5]:
                             snapshot.add_media(
@@ -431,7 +449,7 @@ def main():
                                 media_position=i
                             )
                             snapshot.add_title(
-                                text='Generated (1)',
+                                text='GQN Output',
                                 target_media_pos=i
                             )
 
@@ -442,11 +460,11 @@ def main():
                                 media_position=i
                             )
                             snapshot.add_title(
-                                text='Generated (2)',
+                                text='GQN Output',
                                 target_media_pos=i
                             )
 
-                        for i in [6]:
+                        for i in [6, 12]:
                             snapshot.add_title(
                                 text='Squared Distance',
                                 target_media_pos=i
@@ -466,19 +484,22 @@ def main():
                             frame_num=t,
                         )
 
-                        gqn.animator.Snapshot.add_graph_data(
-                            graph_id='sq_d_avg_graph',
-                            data_id='sq_d_data_0',
-                            new_data=sq_d_sums_1[m+1],
-                            frame_num=t+(m+1)*total_frames_per_rotation
-                        )
+                        if t == total_frames_per_rotation - 1:
+                          sq_d_sums_1[m+1] /= total_frames_per_rotation
+                          sq_d_sums_2[m+1] /= total_frames_per_rotation
+                          gqn.animator.Snapshot.add_graph_data(
+                              graph_id='sq_d_avg_graph',
+                              data_id='sq_d_data_0',
+                              new_data=sq_d_sums_1[m+1],
+                              frame_num=m+1
+                          )
 
-                        gqn.animator.Snapshot.add_graph_data(
-                            graph_id='sq_d_avg_graph',
-                            data_id='sq_d_data_1',
-                            new_data=sq_d_sums_2[m+1],
-                            frame_num=t+(m+1)*total_frames_per_rotation
-                        )
+                          gqn.animator.Snapshot.add_graph_data(
+                              graph_id='sq_d_avg_graph',
+                              data_id='sq_d_data_1',
+                              new_data=sq_d_sums_2[m+1],
+                              frame_num=m+1
+                          )
 
                         angle_rad += 2 * math.pi / total_frames_per_rotation
                         # plt.pause(1e-8)

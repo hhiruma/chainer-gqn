@@ -6,7 +6,7 @@ from .subset import Subset
 
 
 class Dataset():
-    def __init__(self, directory, use_original_images):
+    def __init__(self, directory, use_original_images=True):
         self.directory = directory
         self.use_original_images = use_original_images
         self.current_subset_index = 0
