@@ -114,10 +114,11 @@ class Snapshot():
                        graph_type: str,
                        mode: str,
                        frame_in_rotation: int,
+                       frame_per_cycle=1,
                        num_of_data_per_graph=1,
                        layout_settings={},
                        trivial_settings={}):
-        assert graph_type in {'plot'}
+        assert graph_type in {'plot', 'bar'}
         assert mode in {'sequential', 'simultaneous'}
 
         for graph in Snapshot.graph_list:
@@ -140,6 +141,7 @@ class Snapshot():
                 'type': graph_type,
                 'mode': mode,
                 'frame_in_rotation': frame_in_rotation,
+                'frame_per_cycle': frame_per_cycle,
                 'num_of_data_per_graph': num_of_data_per_graph
             },
             'sub_settings': trivial_settings
@@ -207,44 +209,47 @@ class Snapshot():
                 graph_type = graph['settings']['type']
                 plt_settings = graph['sub_settings']
 
+
+
+                axis.set_xlim(1, graph['settings']['frame_in_rotation'])
+
+                if not self.use_unified_ylim:
+                    y_max = max([max([y for y in x['frame_data']]) for x in graph['data']]) * 1.1
+                axis.set_ylim(0, y_max)
+
+                if 'noXTicks' in plt_settings:
+                    axis.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+                if 'noYTicks' in plt_settings:
+                    axis.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+                if 'xscale' in plt_settings:
+                    if plt_settings['xscale'] in ['linear', 'log', 'symlog', 'logit']:
+                        axis.set_xscale(plt_settings['xscale'])
+                if 'yscale' in plt_settings:
+                    if plt_settings['yscale'] in ['linear', 'log', 'symlog', 'logit']:
+                        axis.set_yscale(plt_settings['yscale'])
+
+                if 'colors' not in plt_settings:
+                    raise TypeError('Plotting requires "colors" setting in trivial settings')
+                if not len(plt_settings['colors']) == graph['settings']['num_of_data_per_graph']:
+                    raise TypeError('Number of colors specified does not match the number of data to be drawn')
+                if 'markers' not in plt_settings:
+                    raise TypeError('Plotting requires "markers" setting in trivial settings')
+                if not len(plt_settings['markers']) == graph['settings']['num_of_data_per_graph']:
+                    raise TypeError('Number of markers specified does not match the number of data to be drawn')
+                _color = plt_settings['colors']
+                _marker = plt_settings['markers']
+
+                if 'legends' in plt_settings:
+                  if not len(plt_settings['legends']) == graph['settings']['num_of_data_per_graph']:
+                    raise TypeError('Number of legends specified does not match the number of data to be drawn')
+                  else:
+                    _legend = plt_settings['legends']
+                else:
+                  _legend = ["n="+str(i) for i in range(graph['settings']['num_of_data_per_graph'])]
+
+
+
                 if graph_type == 'plot':
-                    axis.set_xlim(1, graph['settings']['frame_in_rotation'])
-
-                    if not self.use_unified_ylim:
-                        y_max = max([max([y for y in x['frame_data']]) for x in graph['data']]) * 1.1
-                    axis.set_ylim(0, y_max)
-
-                    if 'noXTicks' in plt_settings:
-                        axis.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
-                    if 'noYTicks' in plt_settings:
-                        axis.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
-                    if 'xscale' in plt_settings:
-                        if plt_settings['xscale'] in ['linear', 'log', 'symlog', 'logit']:
-                            axis.set_xscale(plt_settings['xscale'])
-                    if 'yscale' in plt_settings:
-                        if plt_settings['yscale'] in ['linear', 'log', 'symlog', 'logit']:
-                            axis.set_yscale(plt_settings['yscale'])
-
-                    if 'colors' not in plt_settings:
-                        raise TypeError('Plotting requires "colors" setting in trivial settings')
-                    if not len(plt_settings['colors']) == graph['settings']['num_of_data_per_graph']:
-                        raise TypeError('Number of colors specified does not match the number of data to be drawn')
-                    if 'markers' not in plt_settings:
-                        raise TypeError('Plotting requires "markers" setting in trivial settings')
-                    if not len(plt_settings['markers']) == graph['settings']['num_of_data_per_graph']:
-                        raise TypeError('Number of markers specified does not match the number of data to be drawn')
-                    _color = plt_settings['colors']
-                    _marker = plt_settings['markers']
-
-                    if 'legends' in plt_settings:
-                      if not len(plt_settings['legends']) == graph['settings']['num_of_data_per_graph']:
-                        raise TypeError('Number of legends specified does not match the number of data to be drawn')
-                      else:
-                        _legend = plt_settings['legends']
-                    else:
-                        _legend = ["n="+str(i) for i in range(graph['settings']['num_of_data_per_graph'])]
-                        
-
                     if graph['settings']['mode'] == 'sequential':
                         last_data_num = int(frame_num / graph['settings']['frame_in_rotation'])
                         last_frame_num = frame_num % graph['settings']['frame_in_rotation'] + 1
@@ -282,14 +287,34 @@ class Snapshot():
                     else:
                         raise TypeError('Specified graph mode "' + graph['settings']['mode'] + '" is not implemented')
 
+                elif graph_type == 'bar':
+                    axis.set_xlim(0, graph['settings']['frame_in_rotation']+1)
+                    if graph['settings']['mode'] == 'sequential':
+                        raise TypeError('Sequential mode in bar graph is not implemented yet')
+
+                    elif graph['settings']['mode'] == 'simultaneous':
+                        for data_num in range(graph['settings']['num_of_data_per_graph']):
+                            available_data_num = (frame_num+1)//graph['settings']['frame_per_cycle']
+                            frame_array = np.arange(1+0.2*data_num, available_data_num+1+0.2*data_num, 1)
+                            axis.bar(frame_array,
+                                      graph['data'][data_num]['frame_data'][:available_data_num],
+                                      color=_color[data_num],
+                                      width=0.2)
+                            axis.legend()
+
+                    else:
+                        raise TypeError('Specified graph mode "' + graph['settings']['mode'] + '" is not implemented')
+
+
+
+                else:
+                    pass #still not made
+
                 if len(_title):
                     if len(_title) > 1:
                         raise TypeError('Multiple title located on same position')
                     title = _title[0]
                     axis.set_title(title['text'])
-
-                else:
-                    pass #still not made
 
             else:
                 axis.axis('off')
