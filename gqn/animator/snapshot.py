@@ -240,7 +240,6 @@ class Snapshot():
                       if not len(plt_settings['legends']) == graph['settings']['num_of_data_per_graph']:
                         raise TypeError('Number of legends specified does not match the number of data to be drawn')
                       else:
-                        print('found legend')
                         _legend = plt_settings['legends']
                     else:
                         _legend = ["n="+str(i) for i in range(graph['settings']['num_of_data_per_graph'])]
