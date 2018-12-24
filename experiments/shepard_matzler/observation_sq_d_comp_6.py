@@ -338,34 +338,6 @@ def main():
 
                     angle_rad += 2 * math.pi / total_frames_per_rotation
 
-
-               ### test ##############
-               #plt.subplots_adjust(
-               #    left=None,
-               #    bottom=None,
-               #    right=None,
-               #    top=None,
-               #    wspace=0,
-               #    hspace=0)
-
-               #anim = animation.FuncAnimation(
-               #    fig,
-               #    func_anim_upate,
-               #    fargs = (fig, [snapshot_array]),
-               #    interval=1/24,
-               #    frames=total_frames_per_rotation
-               #)
-
-               #anim.save(
-               #    "{}/shepard_matzler_{}.mp4".format(
-               #        args.output_directory, file_number),
-               #    writer="ffmpeg",
-               #    fps=12)
-               #file_number += 1
-               #continue
-               #########################
-
-
                 # Generate images with observations
                 for m in range(num_views_per_scene):
                     kl_div_sum = 0
