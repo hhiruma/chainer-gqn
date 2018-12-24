@@ -64,7 +64,7 @@ class Snapshot():
             return subplot_data
 
         else:
-            raise TypeError('No subplot found in position')
+            raise TypeError('No subplot found in position |  Subplot pos: ' + str(position))
 
     @classmethod
     def add_graph_data(self, graph_id: str, data_id: str, new_data, frame_num: int):
@@ -84,7 +84,7 @@ class Snapshot():
 
         if target_graph_index >= 0:
             if frame_num >= Snapshot.graph_list[target_graph_index]['settings']['frame_in_rotation']:
-                raise TypeError('Frame number not in formerly specified frame maximum.')
+                raise TypeError('ID : ' + data_id + ' | Frame number not in formerly specified frame maximum.')
 
             if target_data_index >= 0:
                 Snapshot.graph_list[target_graph_index]['data'][target_data_index]['frame_data'][frame_num] = new_data
@@ -99,7 +99,7 @@ class Snapshot():
                 Snapshot.graph_list[target_graph_index]['data'][-1]['frame_data'][frame_num] = new_data
 
         else:
-            raise TypeError('Graph with specified id does not exist. Check your id or if you have called make_plt()')
+            raise TypeError('ID : ' + data_id + ' | Graph with specified id does not exist. Check your id or if you have called make_plt()')
 
     def add_title(self, text: str, target_media_pos: int, title_options={}):
         self.title_list.append({
@@ -180,7 +180,7 @@ class Snapshot():
 
             if len(_media):
                 if len(_media) > 1:
-                    raise TypeError('Multiple media located on same position')
+                    raise TypeError('Multiple media located on same position | Subplot = ' + str(position))
 
                 media = _media[0]
                 if media['media_type'] == 'image':
@@ -196,13 +196,13 @@ class Snapshot():
 
                 if len(_title):
                     if len(_title) > 1:
-                        raise TypeError('Multiple title located on same position')
+                        raise TypeError('Multiple title located on same position | Subplot = ' + str(position))
                     title = _title[0]
                     axis.set_title(title['text'])
 
             elif len(_graph):
                 if len(_graph) > 1:
-                    raise TypeError('Multiple graph located on same posiiton')
+                    raise TypeError('Multiple graph located on same posiiton | Subplot = ' + str(position))
 
                 graph = _graph[0]
 
@@ -229,19 +229,19 @@ class Snapshot():
                         axis.set_yscale(plt_settings['yscale'])
 
                 if 'colors' not in plt_settings:
-                    raise TypeError('Plotting requires "colors" setting in trivial settings')
+                    raise TypeError('ID : ' + graph['id'] + ' | Plotting requires "colors" setting in trivial settings')
                 if not len(plt_settings['colors']) == graph['settings']['num_of_data_per_graph']:
-                    raise TypeError('Number of colors specified does not match the number of data to be drawn')
+                    raise TypeError('ID : ' + graph['id'] + ' | Number of colors specified does not match the number of data to be drawn')
                 if 'markers' not in plt_settings:
-                    raise TypeError('Plotting requires "markers" setting in trivial settings')
+                    raise TypeError('ID : ' + graph['id'] + ' | Plotting requires "markers" setting in trivial settings')
                 if not len(plt_settings['markers']) == graph['settings']['num_of_data_per_graph']:
-                    raise TypeError('Number of markers specified does not match the number of data to be drawn')
+                    raise TypeError('ID : ' + graph['id'] + ' | Number of markers specified does not match the number of data to be drawn')
                 _color = plt_settings['colors']
                 _marker = plt_settings['markers']
 
                 if 'legends' in plt_settings:
                   if not len(plt_settings['legends']) == graph['settings']['num_of_data_per_graph']:
-                    raise TypeError('Number of legends specified does not match the number of data to be drawn')
+                    raise TypeError('ID : ' + graph['id'] + ' | Number of legends specified does not match the number of data to be drawn')
                   else:
                     _legend = plt_settings['legends']
                 else:
@@ -285,12 +285,12 @@ class Snapshot():
                             axis.legend()
 
                     else:
-                        raise TypeError('Specified graph mode "' + graph['settings']['mode'] + '" is not implemented')
+                        raise TypeError('ID : ' + graph['id'] + ' | Specified graph mode "' + graph['settings']['mode'] + '" is not implemented')
 
                 elif graph_type == 'bar':
                     axis.set_xlim(0, graph['settings']['frame_in_rotation']+1)
                     if graph['settings']['mode'] == 'sequential':
-                        raise TypeError('Sequential mode in bar graph is not implemented yet')
+                        raise TypeError('ID : ' + graph['id'] + ' | Sequential mode in bar graph is not implemented yet')
 
                     elif graph['settings']['mode'] == 'simultaneous':
                         for data_num in range(graph['settings']['num_of_data_per_graph']):
@@ -303,7 +303,7 @@ class Snapshot():
                             axis.legend()
 
                     else:
-                        raise TypeError('Specified graph mode "' + graph['settings']['mode'] + '" is not implemented')
+                        raise TypeError('ID : ' + graph['id'] + ' | Specified graph mode "' + graph['settings']['mode'] + '" is not implemented')
 
 
 
@@ -312,7 +312,7 @@ class Snapshot():
 
                 if len(_title):
                     if len(_title) > 1:
-                        raise TypeError('Multiple title located on same position')
+                        raise TypeError('ID : ' + graph['id'] + ' | Multiple title located on same position')
                     title = _title[0]
                     axis.set_title(title['text'])
 
