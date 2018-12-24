@@ -299,7 +299,8 @@ class Snapshot():
                             axis.bar(frame_array,
                                       graph['data'][data_num]['frame_data'][:available_data_num],
                                       color=_color[data_num],
-                                      width=0.2)
+                                      width=0.2,
+                                      label=_legend[data_num])
                             axis.legend()
 
                     else:
