@@ -294,7 +294,7 @@ class Snapshot():
 
                     elif graph['settings']['mode'] == 'simultaneous':
                         for data_num in range(graph['settings']['num_of_data_per_graph']):
-                            available_data_num = (frame_num+1)//graph['settings']['frame_per_cycle']
+                            available_data_num = (frame_num+1)//graph['settings']['frame_per_cycle'] + 1
                             frame_array = np.arange(1+0.2*data_num, available_data_num+1+0.2*data_num, 1)
                             axis.bar(frame_array,
                                       graph['data'][data_num]['frame_data'][:available_data_num],
