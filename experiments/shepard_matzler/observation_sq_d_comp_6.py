@@ -96,13 +96,35 @@ def main():
         cuda.get_device(args.gpu_device).use()
         xp = cupy
 
-    dataset_1 = gqn.data.Dataset(args.dataset_path_1)
-    dataset_2 = gqn.data.Dataset(args.dataset_path_2)
+    if not args.dataset_path == None:
+        assert args.dataset_path_1 == None, 'dataset_path already specified'
+        assert args.dataset_path_2 == None, 'dataset_path already specified'
+        dataset_1 = gqn.data.Dataset(args.dataset_path)
+        dataset_2 = gqn.data.Dataset(args.dataset_path)
+    elif not (args.dataset_path_1 == None or args.dataset_path_2 == None):
+        dataset_1 = gqn.data.Dataset(args.dataset_path_1)
+        dataset_2 = gqn.data.Dataset(args.dataset_path_2)
+    else:
+        raise TypeError('dataset path incorrectly specified')
 
-    hyperparams = HyperParameters(snapshot_directory=args.snapshot_path)
-    model = Model(hyperparams, snapshot_directory=args.snapshot_path)
+    if not args.snapshot_path == None:
+        assert args.snapshot_path_1 == None, 'snapshot_path already specified'
+        assert args.snapshot_path_2 == None, 'snapshot_path already specified'
+        hyperparams_1 = HyperParameters(snapshot_directory=args.snapshot_path)
+        model_1 = Model(hyperparams_1, snapshot_directory=args.snapshot_path)
+        hyperparams_2 = HyperParameters(snapshot_directory=args.snapshot_path)
+        model_2 = Model(hyperparams_2, snapshot_directory=args.snapshot_path)
+    elif not (args.snapshot_path_1 == None or args.snapshot_path_2 == None):
+        hyperparams_1 = HyperParameters(snapshot_directory=args.snapshot_path_1)
+        model_1 = Model(hyperparams_1, snapshot_directory=args.snapshot_path_1)
+        hyperparams_2 = HyperParameters(snapshot_directory=args.snapshot_path_2)
+        model_2 = Model(hyperparams_2, snapshot_directory=args.snapshot_path_2)
+    else:
+        raise TypeError('snapshot path incorrectly specified')
+
     if using_gpu:
-        model.to_gpu()
+        model_1.to_gpu()
+        model_2.to_gpu()
 
     plt.style.use("dark_background")
     fig = plt.figure(figsize=(13, 8))
@@ -111,7 +133,7 @@ def main():
     num_generation = 2
     total_frames_per_rotation = 24
 
-    image_shape = (3, ) + hyperparams.image_size
+    image_shape = (3, ) + hyperparams_1.image_size
     blank_image = make_uint8(np.full(image_shape, 0))
     file_number = 1
 
@@ -120,7 +142,11 @@ def main():
             iterator_1 = gqn.data.Iterator(subset_1, batch_size=1)
             iterator_2 = gqn.data.Iterator(subset_2, batch_size=1)
 
+            count = 0
             for data_indices_1, data_indices_2 in zip(iterator_1, iterator_2):
+                if count < 2:
+                    count += 1
+                    continue
                 snapshot_array = []
 
                 observed_image_array_1 = xp.zeros(
@@ -159,15 +185,15 @@ def main():
                 r_1 = xp.zeros(
                     (
                         num_generation,
-                        hyperparams.representation_channels,
-                    ) + hyperparams.chrz_size,
+                        hyperparams_1.representation_channels,
+                    ) + hyperparams_1.chrz_size,
                     dtype=np.float32)
 
                 r_2 = xp.zeros(
                     (
                         num_generation,
-                        hyperparams.representation_channels,
-                    ) + hyperparams.chrz_size,
+                        hyperparams_2.representation_channels,
+                    ) + hyperparams_2.chrz_size,
                     dtype=np.float32)
 
                 angle_rad = 0
@@ -261,9 +287,9 @@ def main():
 
                     query_viewpoints = rotate_query_viewpoint(
                         angle_rad, num_generation, xp)
-                    generated_images_1 = model.generate_image(
+                    generated_images_1 = model_1.generate_image(
                         query_viewpoints, r_1, xp)
-                    generated_images_2 = model.generate_image(
+                    generated_images_2 = model_2.generate_image(
                         query_viewpoints, r_2, xp)
 
                     total_sq_d_1, _ = gqn.math.get_squared_distance(
@@ -351,10 +377,10 @@ def main():
                     observed_image_array_2[m] = to_gpu(observed_image_2)
                     observed_viewpoint_array_2[m] = to_gpu(observed_viewpoint_2)
 
-                    r_1 = model.compute_observation_representation(
+                    r_1 = model_1.compute_observation_representation(
                         observed_image_array_1[None, :m + 1],
                         observed_viewpoint_array_1[None, :m + 1])
-                    r_2 = model.compute_observation_representation(
+                    r_2 = model_2.compute_observation_representation(
                         observed_image_array_2[None, :m + 1],
                         observed_viewpoint_array_2[None, :m + 1])
 
@@ -411,9 +437,9 @@ def main():
 
                         query_viewpoints = rotate_query_viewpoint(
                             angle_rad, num_generation, xp)
-                        generated_images_1 = model.generate_image(
+                        generated_images_1 = model_1.generate_image(
                             query_viewpoints, r_1, xp)
-                        generated_images_2 = model.generate_image(
+                        generated_images_2 = model_2.generate_image(
                             query_viewpoints, r_2, xp)
 
                         total_sq_d_1, _ = gqn.math.get_squared_distance(
@@ -516,10 +542,12 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-path_1", "-dataset1", type=str, required=True)
-    parser.add_argument("--dataset-path_2", "-dataset2", type=str, required=True)
-    parser.add_argument(
-        "--snapshot-path", "-snapshot", type=str, required=True)
+    parser.add_argument("--dataset-path", "-dataset", type=str)
+    parser.add_argument("--dataset-path-1", "-dataset1", type=str)
+    parser.add_argument("--dataset-path-2", "-dataset2", type=str)
+    parser.add_argument("--snapshot-path", "-snapshot", type=str)
+    parser.add_argument("--snapshot-path-1", "-snapshot1", type=str)
+    parser.add_argument("--snapshot-path-2", "-snapshot2", type=str)
     parser.add_argument("--gpu-device", "-gpu", type=int, default=0)
     parser.add_argument("--image-size", type=int, default=64)
     parser.add_argument("--num-cubes", "-cubes", type=int, default=5)
