@@ -160,6 +160,7 @@ def main():
                     id='sq_d_graph',
                     pos=7,
                     graph_type='plot',
+                    mode='sequential',
                     frame_in_rotation=total_frames_per_rotation,
                     num_of_data_per_graph=num_views_per_scene + 1,
                     trivial_settings={
