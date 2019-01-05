@@ -96,7 +96,7 @@ def main():
         cuda.get_device(args.gpu_device).use()
         xp = cupy
 
-    dataset_train = gqn.data.Dataset(args.dataset_path_train)
+    dataset_train = gqn.data.Dataset(args.dataset_path)
 
     if not args.snapshot_path == None:
         assert args.snapshot_path_1 == None, 'snapshot_path already specified'
@@ -137,6 +137,8 @@ def main():
 
             #for data_indices_1, data_indices_2 in zip(iterator_1, iterator_2):
             for j, data_indices in enumerate(iterator_train):
+                if j == 0:
+                    continue
                 snapshot_array = []
 
                 observed_image_array_1 = xp.zeros(
@@ -150,14 +152,30 @@ def main():
 
 
                 test_data_path = os.path.join(args.dataset_path, 'test_data', str(i)+'_'+str(j)+'.npy')
-                if os.path.exists(test_data_path):
-                    test_data = np.load(test_data_path)
+                if not os.path.exists(test_data_path):
+                    raise TypeError('test data not found')
+                test_data = np.load(test_data_path)
 
                 # shape: (batch, views, height, width, channels)
                 # range: [-1, 1]
                 images_1, viewpoints, original_images_1 = subset[data_indices]
+                print('images_1.shape')
+                print(images_1.shape)
                 #images_2, viewpoints_2, original_images_2 = subset_2[data_indices_2]
                 images_2, original_images_2  = test_data
+                print('test_data:')
+                print(len(test_data))
+                print(type(test_data))
+                print('images_2')
+                print(len(images_2))
+                print(type(images_2))
+                images_2 = np.array([np.array(images_2)])      
+                print(images_2.shape)
+                print(type(images_2))
+                print('original_images_2')
+                print(len(original_images_2))
+                print(type(original_images_2))
+                original_images_2 = np.array([np.array(original_images_2)])      
 
                 # (batch, views, height, width, channels) -> (batch, views, channels, height, width)
                 images_1 = images_1.transpose((0, 1, 4, 2, 3)).astype(np.float32)
@@ -235,7 +253,7 @@ def main():
                     trivial_settings={
                         'colors': ['red', 'blue'],
                         'markers': ['', ''],
-                        'legends': ['Test', 'Train']
+                        'legends': ['Train', 'Test']
                     }
                 )
 
@@ -277,9 +295,9 @@ def main():
                             media_position=i
                         )
                         if i == 1:
-                            snapshot.add_title(text='Test',target_media_pos=i)
+                            snapshot.add_title(text='Train',target_media_pos=i)
                         if i == 9:
-                            snapshot.add_title(text='Train', target_media_pos=i)
+                            snapshot.add_title(text='Test', target_media_pos=i)
 
                     query_viewpoints = rotate_query_viewpoint(
                         angle_rad, num_generation, xp)
@@ -294,9 +312,7 @@ def main():
                     sq_d_sums_1[0] += total_sq_d_1
 
                     total_sq_d_2, _ = gqn.math.get_squared_distance(
-                        #######
                         to_cpu(current_scene_original_images_2[t]),
-                        #######
                         to_cpu(generated_images_2[0]))
                     sq_d_sums_2[0] += total_sq_d_2
 
@@ -422,9 +438,8 @@ def main():
                                 media_position=i
                             )
                             if i == 1:
-                                snapshot.add_title(text='Test', target_media_pos=i)
+                                snapshot.add_title(text='Train', target_media_pos=i)
 
-                        ##########
                         for i, observed_image in zip([9, 10, 11, 12, 13, 14], observed_image_array_2):
                             snapshot.add_media(
                                 media_type='image',
@@ -432,8 +447,7 @@ def main():
                                 media_position=i
                             )
                             if i == 9:
-                                snapshot.add_title(text='Train', target_media_pos=i)
-                        #######
+                                snapshot.add_title(text='Test', target_media_pos=i)
 
                         query_viewpoints = rotate_query_viewpoint(
                             angle_rad, num_generation, xp)
@@ -448,9 +462,7 @@ def main():
                         sq_d_sums_1[m+1] += total_sq_d_1
 
                         total_sq_d_2, _ = gqn.math.get_squared_distance(
-                            ######
                             to_cpu(current_scene_original_images_2[t]),
-                            ######
                             to_cpu(generated_images_2[0]))
                         sq_d_sums_2[m+1] += total_sq_d_2
 
@@ -545,7 +557,6 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset-path", "-dataset", type=str)
-    parser.add_argument("--dataset-path-train", "-traindata", type=str)
     parser.add_argument("--snapshot-path", "-snapshot", type=str)
     parser.add_argument("--snapshot-path-1", "-snapshot1", type=str)
     parser.add_argument("--snapshot-path-2", "-snapshot2", type=str)
